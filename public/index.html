@@ -192,10 +192,10 @@ body.paymode #appShell{display:none !important}
           <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
             <button class="btn btn-teal" style="justify-content:center" onclick="showLogin()">Sign in as admin →</button>
             <div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px;font-size:12px;line-height:1.6">
-              <div><b>admin@tapflow.local</b> / Admin123!</div>
-              <div>manager@tapflow.local / Manager123!</div>
-              <div>employee@tapflow.local / Employee123!</div>
-              <div><b style="color:#00C9A7">arcade@tapflow.local</b> / Arcade123! — Arcade Crew</div>
+              <div><b><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2c4d484145426c584d5c4a40435b0240434f4d40">[email&#160;protected]</a></b> / Admin123!</div>
+              <div><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a8c5c9c6c9cfcddae8dcc9d8cec4c7df86c4c7cbc9c4">[email&#160;protected]</a> / Manager123!</div>
+              <div><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f1949c819d9e889494b1859081979d9e86df9d9e92909d">[email&#160;protected]</a> / Employee123!</div>
+              <div><b style="color:#00C9A7"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="dfbeadbcbebbba9fabbeafb9b3b0a8f1b3b0bcbeb3">[email&#160;protected]</a></b> / Arcade123! — Arcade Crew</div>
             </div>
             <div style="font-size:11px;color:#C2D1E8;line-height:1.5">After sign-in: <b style="color:#fff">Dashboard</b> = manager-only graphs · <b style="color:#fff">POS</b> = charge a reader · <b style="color:#fff">Products</b> = full CRUD · <b style="color:#fff">QR Pay</b> = phone checkout · <b style="color:#fff">Transactions</b> = ledger + refunds · <b style="color:#fff">Employees</b> = staff accounts · <b style="color:#fff">Settings</b> = Adyen + receipts. Cash & QR work now; Adyen keys can be imported later in Settings → Import.</div>
           </div>
@@ -219,10 +219,10 @@ body.paymode #appShell{display:none !important}
         <div style="margin-top:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px">
           <b style="font-size:12px">Default accounts (change after first login)</b>
           <div style="font-size:12px;line-height:1.6;color:#D6E2F5;margin-top:6px">
-            <div><b style="color:#fff">admin@tapflow.local</b> / Admin123! — full access</div>
-            <div><b style="color:#fff">manager@tapflow.local</b> / Manager123! — products + dashboard</div>
-            <div><b style="color:#fff">employee@tapflow.local</b> / Employee123! — POS only</div>
-            <div><b style="color:#00C9A7">arcade@tapflow.local</b> / Arcade123! — Arcade Crew (POS)</div>
+            <div><b style="color:#fff"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1e7f7a7377705e6a7f6e787271693072717d7f72">[email&#160;protected]</a></b> / Admin123! — full access</div>
+            <div><b style="color:#fff"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2b464a454a4c4e596b5f4a5b4d47445c054744484a47">[email&#160;protected]</a></b> / Manager123! — products + dashboard</div>
+            <div><b style="color:#fff"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="482d25382427312d2d083c29382e24273f6624272b2924">[email&#160;protected]</a></b> / Employee123! — POS only</div>
+            <div><b style="color:#00C9A7"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="80e1f2e3e1e4e5c0f4e1f0e6eceff7aeecefe3e1ec">[email&#160;protected]</a></b> / Arcade123! — Arcade Crew (POS)</div>
           </div>
         </div>
       </div>
@@ -610,844 +610,1258 @@ async function stripeTerminalPay({amountCents, terminalId}){
 <div id="toastWrap" class="toast-wrap"></div>
 <style>@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(11,30,58,.25)}70%{box-shadow:0 0 0 16px rgba(11,30,58,0)}100%{box-shadow:0 0 0 0 rgba(11,30,58,0)}}</style>
 
-<script>
-let token = localStorage.getItem('tapflow_token') || '';
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>let token = localStorage.getItem("tapflow_token") || "";
 let me = null;
 let products = [];
-let cart = []; // {id, name, price, qty, image}
-let selectedPay = 'terminal';
-let currentCategory = 'all';
+let cart = [];
+let selectedPay = "terminal";
+let currentCategory = "all";
 let qPoll = null;
 let lastQRId = null;
 let settingsCache = null;
-
-function headers(){ return token ? { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' } : { 'Content-Type':'application/json' }; }
-function api(path, opts={}){ opts.headers = { ...(opts.headers||{}), ...headers() }; if(opts.body && typeof opts.body==='object') opts.body = JSON.stringify(opts.body); return fetch(path, opts).then(async r=>{ const text = await r.text(); let data; try{ data=JSON.parse(text) }catch{ data={error:text} } if(!r.ok) { const e=new Error(data.error||data.message||('HTTP '+r.status)); e.code=data.code; e.details=data; e.status=r.status; throw e; } return data; }); }
-function toast(msg, type=''){ const w=document.getElementById('toastWrap'); const el=document.createElement('div'); el.className='toast '+(type||''); el.textContent=msg; w.appendChild(el); setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(4px)'; el.style.transition='.3s'; setTimeout(()=>el.remove(),300)}, 3600); }
-function setActiveNav(view){
-  document.querySelectorAll('.nav a').forEach(a=>a.classList.remove('active'));
-  const ids = {overview:'nav-overview', dashboard:'nav-dashboard', pos:'nav-pos-h', products:'nav-products-h', qr:'nav-qr-h'};
-  if(ids[view] && document.getElementById(ids[view])) document.getElementById(ids[view]).classList.add('active');
-  document.querySelectorAll('#appShell .btn').forEach(b=>{ b.style.background=''; b.style.color=''; b.style.borderColor=''; });
-  // Highlight by the go('view') call in the button's own onclick — order-proof
-  document.querySelectorAll('#appShell .btn').forEach(b=>{
-    const oc=b.getAttribute('onclick')||'';
-    if(oc.includes("go('"+view+"')")){ b.style.background='var(--navy)'; b.style.color='#fff'; b.style.borderColor='var(--navy)'; }
+function headers() {
+  return token ? { "Authorization": "Bearer " + token, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
+}
+function api(path, opts = {}) {
+  opts.headers = { ...opts.headers || {}, ...headers() };
+  if (opts.body && typeof opts.body === "object") opts.body = JSON.stringify(opts.body);
+  return fetch(path, opts).then(async (r) => {
+    const text = await r.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      data = { error: text };
+    }
+    if (!r.ok) {
+      const e = new Error(data.error || data.message || "HTTP " + r.status);
+      e.code = data.code;
+      e.details = data;
+      e.status = r.status;
+      throw e;
+    }
+    return data;
   });
 }
-function isManager(){ return me && (me.role==='admin' || me.role==='manager'); }
-async function loadDashboard(){
-  if(!isManager()){ document.getElementById('dashNotManager').style.display='block'; return; }
-  document.getElementById('dashNotManager').style.display='none';
-  try{
-    const d = await api('/api/stats/overview');
-    document.getElementById('dashToday').textContent = '$'+Number(d.todayRevenue||0).toFixed(2);
-    document.getElementById('dashTodaySub').textContent = `${d.todayCount||0} sales today • ${d.totalCaptured||0} captured total`;
-    document.getElementById('dashWeek').textContent = '$'+Number(d.weekRevenue||0).toFixed(2);
-    document.getElementById('dashMonth').textContent = '$'+Number(d.monthRevenue||0).toFixed(2);
-    document.getElementById('dashTotal').textContent = '$'+Number(d.totalRevenue||0).toFixed(2);
-    document.getElementById('dashTotalSub').textContent = `${d.totalTx||0} transactions • ${d.pending||0} pending`;
-    // Charts
-    drawBarChart('revenueChart', (d.daily||[]).map(x=>x.date.slice(5)), (d.daily||[]).map(x=>x.revenue), '#00C9A7');
-    const methods = d.byMethod||{};
-    drawDonut('methodChart', Object.keys(methods), Object.values(methods));
-    document.getElementById('methodLegend').innerHTML = Object.entries(methods).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>${k}</span><b>$${Number(v).toFixed(2)}</b></div>`).join('') || '<span style="color:var(--muted)">No payments yet</span>';
-    document.getElementById('topProducts').innerHTML = (d.topProducts||[]).map(p=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${p.name}</span><b>${p.qty} sold</b></div>`).join('') || '<span style="color:var(--muted)">No sales yet</span>';
-    document.getElementById('catBreakdown').innerHTML = Object.entries(d.byCategory||{}).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${k}</span><b>$${Number(v).toFixed(2)}</b></div>`).join('') || '<span style="color:var(--muted)">No data</span>';
-    document.getElementById('locBreakdown').innerHTML = Object.entries(d.byLocation||{}).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${k}</span><b>$${Number(v).toFixed(2)}</b></div>`).join('') || '<span style="color:var(--muted)">No data</span>';
-  }catch(e){ toast(e.message,'err'); }
+function toast(msg, type = "") {
+  const w = document.getElementById("toastWrap");
+  const el = document.createElement("div");
+  el.className = "toast " + (type || "");
+  el.textContent = msg;
+  w.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = "0";
+    el.style.transform = "translateY(4px)";
+    el.style.transition = ".3s";
+    setTimeout(() => el.remove(), 300);
+  }, 3600);
 }
-function drawBarChart(canvasId, labels, values, color){
-  const c=document.getElementById(canvasId); if(!c) return; const ctx=c.getContext('2d'); const W=c.width, H=c.height, pad=30;
-  ctx.clearRect(0,0,W,H);
-  const max = Math.max(1, ...values);
-  const barW = (W - pad*2) / Math.max(1, values.length) * 0.65;
-  const gap = (W - pad*2) / Math.max(1, values.length) * 0.35;
-  // grid
-  ctx.strokeStyle='#E6EAF2'; ctx.lineWidth=1;
-  for(let i=0;i<=4;i++){ const y=pad + (H - pad*2) * i/4; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke(); ctx.fillStyle='#6B7A90'; ctx.font='10px Inter'; ctx.fillText('$'+Math.round(max*(1-i/4)), 2, y+3); }
-  values.forEach((v,i)=>{
-    const x = pad + i*(barW+gap) + gap/2;
-    const h = (v/max) * (H - pad*2);
-    const y = H - pad - h;
-    ctx.fillStyle=color; ctx.beginPath(); ctx.roundRect(x,y,barW,h,6); ctx.fill();
-    ctx.fillStyle='#0B1E3A'; ctx.font='700 10px Inter'; ctx.textAlign='center'; ctx.fillText(labels[i]||'', x+barW/2, H-8);
-    if(v>0){ ctx.fillStyle='#007A65'; ctx.font='700 11px Inter'; ctx.fillText('$'+Number(v).toFixed(0), x+barW/2, y-6); }
+function setActiveNav(view) {
+  document.querySelectorAll(".nav a").forEach((a) => a.classList.remove("active"));
+  const ids = { overview: "nav-overview", dashboard: "nav-dashboard", pos: "nav-pos-h", products: "nav-products-h", qr: "nav-qr-h" };
+  if (ids[view] && document.getElementById(ids[view])) document.getElementById(ids[view]).classList.add("active");
+  document.querySelectorAll("#appShell .btn").forEach((b) => {
+    b.style.background = "";
+    b.style.color = "";
+    b.style.borderColor = "";
+  });
+  document.querySelectorAll("#appShell .btn").forEach((b) => {
+    const oc = b.getAttribute("onclick") || "";
+    if (oc.includes("go('" + view + "')")) {
+      b.style.background = "var(--navy)";
+      b.style.color = "#fff";
+      b.style.borderColor = "var(--navy)";
+    }
   });
 }
-function drawDonut(canvasId, labels, values){
-  const c=document.getElementById(canvasId); if(!c) return; const ctx=c.getContext('2d'); const W=c.width, H=c.height; const CX=W/2, CY=H/2, R=Math.min(W,H)/2 - 18;
-  ctx.clearRect(0,0,W,H);
-  const total = values.reduce((a,b)=>a+b,0) || 1;
-  const colors=['#00C9A7','#0B1E3A','#FF6B35','#FFB020','#7A5AFF','#E23B3B'];
-  let ang=-Math.PI/2;
-  values.forEach((v,i)=>{
-    const sweep = (v/total)*Math.PI*2;
-    ctx.beginPath(); ctx.moveTo(CX,CY); ctx.arc(CX,CY,R,ang,ang+sweep); ctx.closePath(); ctx.fillStyle=colors[i%colors.length]; ctx.fill();
-    ang+=sweep;
-  });
-  // hole
-  ctx.beginPath(); ctx.arc(CX,CY,R*0.58,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
-  ctx.fillStyle='#0B1E3A'; ctx.font='800 12px Inter'; ctx.textAlign='center'; ctx.fillText(labels.length? labels[0]:'—', CX, CY-2);
-  ctx.font='700 10px Inter'; ctx.fillStyle='#6B7A90'; ctx.fillText('$'+Number(total).toFixed(0), CX, CY+10);
+function isManager() {
+  return me && (me.role === "admin" || me.role === "manager");
 }
-function importAdyen(){
-  try{
-    const j=JSON.parse(document.getElementById('cfgImport').value.trim());
-    if(j.apiKey||j.adyen_api_key) document.getElementById('cfgApiKey').value = j.apiKey||j.adyen_api_key||j.ADYEN_API_KEY||'';
-    if(j.merchantAccount||j.merchant_account||j.adyen_merchant_account) document.getElementById('cfgMerchant').value = j.merchantAccount||j.merchant_account||j.adyen_merchant_account||'';
-    if(j.clientKey||j.client_key||j.adyen_client_key) document.getElementById('cfgClientKey').value = j.clientKey||j.client_key||j.adyen_client_key||'';
-    if(j.hmacKey||j.hmac_key||j.adyen_hmac_key) document.getElementById('cfgHmac').value = j.hmacKey||j.hmac_key||j.adyen_hmac_key||'';
-    if(j.terminalId||j.terminal_id||j.adyen_terminal_id) document.getElementById('cfgTerminal').value = j.terminalId||j.terminal_id||j.adyen_terminal_id||'';
-    if(j.env||j.adyen_env||j.environment) document.getElementById('cfgEnv').value = j.env||j.adyen_env||j.environment||'test';
-    toast('Imported — now click Save Payment Settings','ok');
-  }catch(e){ toast('Invalid JSON — check formatting','err'); }
-}
-function importAdyenFile(e){
-  const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ document.getElementById('cfgImport').value=r.result; importAdyen(); }; r.readAsText(f);
-}
-function exportAdyen(){
-  const data={ apiKey: document.getElementById('cfgApiKey').value, merchantAccount: document.getElementById('cfgMerchant').value, clientKey: document.getElementById('cfgClientKey').value, hmacKey: document.getElementById('cfgHmac').value, terminalId: document.getElementById('cfgTerminal').value, env: document.getElementById('cfgEnv').value };
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='adyen-config.json'; a.click(); URL.revokeObjectURL(url); toast('Exported adyen-config.json','ok');
-}
-function go(view){
-  document.body.classList.toggle('paymode', view==='pay');
-  const publicViews = ['overview','login','pay'];
-  // SIGN-IN GATE: staff pages (POS, Products, QR, dashboard, ...) require login.
-  // Signed-out visitors who click or land on them get the sign-in screen instead —
-  // never a half-hidden screen that looks open but isn't clickable.
-  if(!publicViews.includes(view) && !me){
-    try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
-    view='login';
+async function loadDashboard() {
+  if (!isManager()) {
+    document.getElementById("dashNotManager").style.display = "block";
+    return;
   }
-  if(!publicViews.includes(view) && !me){ showLogin(); return; }
-  // role guard: dashboard only for managers
-  if(view==='dashboard' && me && !isManager()){ toast('Dashboard is for managers only — Arcade Crew uses POS & QR','err'); return; }
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  const el=document.getElementById('view-'+view);
-  if(el){ el.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }
-  // Show/hide appShell based on auth — overview is special: show without appShell when logged out, with appShell when logged in
-  if(view==='overview'){
-    if(me){ document.getElementById('appShell').classList.remove('hidden'); document.getElementById('view-login').style.display='none'; }
-    else { document.getElementById('appShell').classList.add('hidden'); document.getElementById('view-login').classList.remove('active'); }
-  } else if(view==='login'){
-    document.getElementById('appShell').classList.add('hidden');
-  } else if(view==='pay'){
-    document.getElementById('appShell').classList.add('hidden'); document.getElementById('view-login').style.display='none';
+  document.getElementById("dashNotManager").style.display = "none";
+  try {
+    const d = await api("/api/stats/overview");
+    document.getElementById("dashToday").textContent = "$" + Number(d.todayRevenue || 0).toFixed(2);
+    document.getElementById("dashTodaySub").textContent = `${d.todayCount || 0} sales today \u2022 ${d.totalCaptured || 0} captured total`;
+    document.getElementById("dashWeek").textContent = "$" + Number(d.weekRevenue || 0).toFixed(2);
+    document.getElementById("dashMonth").textContent = "$" + Number(d.monthRevenue || 0).toFixed(2);
+    document.getElementById("dashTotal").textContent = "$" + Number(d.totalRevenue || 0).toFixed(2);
+    document.getElementById("dashTotalSub").textContent = `${d.totalTx || 0} transactions \u2022 ${d.pending || 0} pending`;
+    drawBarChart("revenueChart", (d.daily || []).map((x) => x.date.slice(5)), (d.daily || []).map((x) => x.revenue), "#00C9A7");
+    const methods = d.byMethod || {};
+    drawDonut("methodChart", Object.keys(methods), Object.values(methods));
+    document.getElementById("methodLegend").innerHTML = Object.entries(methods).map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>${k}</span><b>$${Number(v).toFixed(2)}</b></div>`).join("") || '<span style="color:var(--muted)">No payments yet</span>';
+    document.getElementById("topProducts").innerHTML = (d.topProducts || []).map((p) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${p.name}</span><b>${p.qty} sold</b></div>`).join("") || '<span style="color:var(--muted)">No sales yet</span>';
+    document.getElementById("catBreakdown").innerHTML = Object.entries(d.byCategory || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${k}</span><b>$${Number(v).toFixed(2)}</b></div>`).join("") || '<span style="color:var(--muted)">No data</span>';
+    document.getElementById("locBreakdown").innerHTML = Object.entries(d.byLocation || {}).map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${k}</span><b>$${Number(v).toFixed(2)}</b></div>`).join("") || '<span style="color:var(--muted)">No data</span>';
+  } catch (e) {
+    toast(e.message, "err");
+  }
+}
+function drawBarChart(canvasId, labels, values, color) {
+  const c = document.getElementById(canvasId);
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  const W = c.width, H = c.height, pad = 30;
+  ctx.clearRect(0, 0, W, H);
+  const max = Math.max(1, ...values);
+  const barW = (W - pad * 2) / Math.max(1, values.length) * 0.65;
+  const gap = (W - pad * 2) / Math.max(1, values.length) * 0.35;
+  ctx.strokeStyle = "#E6EAF2";
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad + (H - pad * 2) * i / 4;
+    ctx.beginPath();
+    ctx.moveTo(pad, y);
+    ctx.lineTo(W - pad, y);
+    ctx.stroke();
+    ctx.fillStyle = "#6B7A90";
+    ctx.font = "10px Inter";
+    ctx.fillText("$" + Math.round(max * (1 - i / 4)), 2, y + 3);
+  }
+  values.forEach((v, i) => {
+    const x = pad + i * (barW + gap) + gap / 2;
+    const h = v / max * (H - pad * 2);
+    const y = H - pad - h;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x, y, barW, h, 6);
+    ctx.fill();
+    ctx.fillStyle = "#0B1E3A";
+    ctx.font = "700 10px Inter";
+    ctx.textAlign = "center";
+    ctx.fillText(labels[i] || "", x + barW / 2, H - 8);
+    if (v > 0) {
+      ctx.fillStyle = "#007A65";
+      ctx.font = "700 11px Inter";
+      ctx.fillText("$" + Number(v).toFixed(0), x + barW / 2, y - 6);
+    }
+  });
+}
+function drawDonut(canvasId, labels, values) {
+  const c = document.getElementById(canvasId);
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  const W = c.width, H = c.height;
+  const CX = W / 2, CY = H / 2, R = Math.min(W, H) / 2 - 18;
+  ctx.clearRect(0, 0, W, H);
+  const total = values.reduce((a, b) => a + b, 0) || 1;
+  const colors = ["#00C9A7", "#0B1E3A", "#FF6B35", "#FFB020", "#7A5AFF", "#E23B3B"];
+  let ang = -Math.PI / 2;
+  values.forEach((v, i) => {
+    const sweep = v / total * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.arc(CX, CY, R, ang, ang + sweep);
+    ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+    ang += sweep;
+  });
+  ctx.beginPath();
+  ctx.arc(CX, CY, R * 0.58, 0, Math.PI * 2);
+  ctx.fillStyle = "#fff";
+  ctx.fill();
+  ctx.fillStyle = "#0B1E3A";
+  ctx.font = "800 12px Inter";
+  ctx.textAlign = "center";
+  ctx.fillText(labels.length ? labels[0] : "\u2014", CX, CY - 2);
+  ctx.font = "700 10px Inter";
+  ctx.fillStyle = "#6B7A90";
+  ctx.fillText("$" + Number(total).toFixed(0), CX, CY + 10);
+}
+function importAdyen() {
+  try {
+    const j = JSON.parse(document.getElementById("cfgImport").value.trim());
+    if (j.apiKey || j.adyen_api_key) document.getElementById("cfgApiKey").value = j.apiKey || j.adyen_api_key || j.ADYEN_API_KEY || "";
+    if (j.merchantAccount || j.merchant_account || j.adyen_merchant_account) document.getElementById("cfgMerchant").value = j.merchantAccount || j.merchant_account || j.adyen_merchant_account || "";
+    if (j.clientKey || j.client_key || j.adyen_client_key) document.getElementById("cfgClientKey").value = j.clientKey || j.client_key || j.adyen_client_key || "";
+    if (j.hmacKey || j.hmac_key || j.adyen_hmac_key) document.getElementById("cfgHmac").value = j.hmacKey || j.hmac_key || j.adyen_hmac_key || "";
+    if (j.terminalId || j.terminal_id || j.adyen_terminal_id) document.getElementById("cfgTerminal").value = j.terminalId || j.terminal_id || j.adyen_terminal_id || "";
+    if (j.env || j.adyen_env || j.environment) document.getElementById("cfgEnv").value = j.env || j.adyen_env || j.environment || "test";
+    toast("Imported \u2014 now click Save Payment Settings", "ok");
+  } catch (e) {
+    toast("Invalid JSON \u2014 check formatting", "err");
+  }
+}
+function importAdyenFile(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    document.getElementById("cfgImport").value = r.result;
+    importAdyen();
+  };
+  r.readAsText(f);
+}
+function exportAdyen() {
+  const data = { apiKey: document.getElementById("cfgApiKey").value, merchantAccount: document.getElementById("cfgMerchant").value, clientKey: document.getElementById("cfgClientKey").value, hmacKey: document.getElementById("cfgHmac").value, terminalId: document.getElementById("cfgTerminal").value, env: document.getElementById("cfgEnv").value };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "adyen-config.json";
+  a.click();
+  URL.revokeObjectURL(url);
+  toast("Exported adyen-config.json", "ok");
+}
+function go(view) {
+  document.body.classList.toggle("paymode", view === "pay");
+  const publicViews = ["overview", "login", "pay"];
+  if (!publicViews.includes(view) && !me) {
+    try {
+      history.replaceState(null, "", location.pathname + location.search);
+    } catch (e) {
+    }
+    view = "login";
+  }
+  if (view === "dashboard" && me && !isManager()) {
+    toast("Dashboard is for managers only \u2014 Arcade Crew uses POS & QR", "err");
+    return;
+  }
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  const el = document.getElementById("view-" + view);
+  if (el) {
+    el.classList.add("active");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  if (view === "overview") {
+    if (me) {
+      document.getElementById("appShell").classList.remove("hidden");
+      document.getElementById("view-login").style.display = "none";
+    } else {
+      document.getElementById("appShell").classList.add("hidden");
+      document.getElementById("view-login").classList.remove("active");
+    }
+  } else if (view === "login") {
+    document.getElementById("appShell").classList.add("hidden");
+  } else if (view === "pay") {
+    document.getElementById("appShell").classList.add("hidden");
+    document.getElementById("view-login").style.display = "none";
   } else {
-    document.getElementById('appShell').classList.remove('hidden'); document.getElementById('view-login').classList.remove('active'); document.getElementById('view-login').style.display='none';
+    document.getElementById("appShell").classList.remove("hidden");
+    document.getElementById("view-login").classList.remove("active");
+    document.getElementById("view-login").style.display = "none";
   }
   setActiveNav(view);
-  if(view!=='pay') history.replaceState(null,'','#'+view);
-  if(view==='overview'){ /* no fetch */ }
-  if(view==='pos') { if(products.length===0) fetchProducts(); else renderProducts(); }
-  if(view==='products') fetchProducts();
-  if(view==='transactions') fetchTransactions();
-  if(view==='qr') { renderQRCartPreview(); fetchQRSessions(); }
-  if(view==='arcade') fetchArcadeCards();
-  if(view==='users') fetchUsers();
-  if(view==='settings') loadSettings();
-  if(view==='pay') loadPaySession();
+  if (view !== "pay") history.replaceState(null, "", "#" + view);
+  if (view === "overview") {
+  }
+  if (view === "pos") {
+    if (products.length === 0) fetchProducts();
+    else renderProducts();
+  }
+  if (view === "products") fetchProducts();
+  if (view === "transactions") fetchTransactions();
+  if (view === "qr") {
+    renderQRCartPreview();
+    fetchQRSessions();
+  }
+  if (view === "arcade") fetchArcadeCards();
+  if (view === "users") fetchUsers();
+  if (view === "settings") loadSettings();
+  if (view === "pay") loadPaySession();
 }
-function showLogin(){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.getElementById('view-login').classList.add('active');
-  document.getElementById('view-login').style.display='';
-  document.getElementById('appShell').classList.add('hidden');
-  setActiveNav('login');
+function showLogin() {
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  document.getElementById("view-login").classList.add("active");
+  document.getElementById("view-login").style.display = "";
+  document.getElementById("appShell").classList.add("hidden");
+  setActiveNav("login");
 }
-function showApp(){
-  document.getElementById('view-login').style.display='none';
-  document.getElementById('view-login').classList.remove('active');
-  document.getElementById('appShell').classList.remove('hidden');
-  document.getElementById('loginBtn').classList.add('hidden');
-  document.getElementById('logoutBtn').classList.remove('hidden');
-  document.getElementById('userBadge').classList.remove('hidden');
-  const roleLabel = me.role==='arcade_crew' ? 'Arcade Crew' : me.role;
-  document.getElementById('userBadge').textContent = me.name + ' • ' + roleLabel;
-  document.getElementById('shiftInfo').textContent = 'Shift: ' + me.name + ' • ' + new Date().toLocaleDateString();
-  // role gates
-  const isAdmin = me.role==='admin';
-  const isMgr = me.role==='admin' || me.role==='manager';
-  const isCrew = me.role==='arcade_crew';
-  document.getElementById('usersNavBtn').style.display = isMgr ? '' : 'none';
-  document.getElementById('settingsNavBtn').style.display = isAdmin ? '' : 'none';
-  document.getElementById('dashNavBtn').style.display = isMgr ? '' : 'none';
-  document.getElementById('nav-dashboard').style.display = isMgr ? '' : 'none';
-  // Arcade Crew gets POS focus, hide manager-only hints
-  if(isCrew){ toast('Arcade Crew — POS + QR only. Dashboard is managers-only.','ok'); }
+function showApp() {
+  document.getElementById("view-login").style.display = "none";
+  document.getElementById("view-login").classList.remove("active");
+  document.getElementById("appShell").classList.remove("hidden");
+  document.getElementById("loginBtn").classList.add("hidden");
+  document.getElementById("logoutBtn").classList.remove("hidden");
+  document.getElementById("userBadge").classList.remove("hidden");
+  const roleLabel = me.role === "arcade_crew" ? "Arcade Crew" : me.role;
+  document.getElementById("userBadge").textContent = me.name + " \u2022 " + roleLabel;
+  document.getElementById("shiftInfo").textContent = "Shift: " + me.name + " \u2022 " + (/* @__PURE__ */ new Date()).toLocaleDateString();
+  const isAdmin = me.role === "admin";
+  const isMgr = me.role === "admin" || me.role === "manager";
+  const isCrew = me.role === "arcade_crew";
+  document.getElementById("usersNavBtn").style.display = isMgr ? "" : "none";
+  document.getElementById("settingsNavBtn").style.display = isAdmin ? "" : "none";
+  document.getElementById("dashNavBtn").style.display = isMgr ? "" : "none";
+  document.getElementById("nav-dashboard").style.display = isMgr ? "" : "none";
+  if (isCrew) {
+    toast("Arcade Crew \u2014 POS + QR only. Dashboard is managers-only.", "ok");
+  }
   updateAdyenBadge();
-  // restore terminal id
-  const t = localStorage.getItem('tapflow_terminal');
-  if(t) document.getElementById('terminalIdInput').value = t;
-  if(isMgr) go('dashboard'); else go('overview');
+  const t = localStorage.getItem("tapflow_terminal");
+  if (t) document.getElementById("terminalIdInput").value = t;
+  if (isMgr) go("dashboard");
+  else go("overview");
 }
-async function doLogin(e){
+async function doLogin(e) {
   e.preventDefault();
-  const email=document.getElementById('loginEmail').value.trim();
-  const password=document.getElementById('loginPass').value;
-  const errEl=document.getElementById('loginErr');
-  errEl.style.display='none';
-  try{
-    const data = await api('/api/auth/login', {method:'POST', body:{email,password}});
-    token=data.token; me=data.user;
-    localStorage.setItem('tapflow_token', token);
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPass").value;
+  const errEl = document.getElementById("loginErr");
+  errEl.style.display = "none";
+  try {
+    const data = await api("/api/auth/login", { method: "POST", body: { email, password } });
+    token = data.token;
+    me = data.user;
+    localStorage.setItem("tapflow_token", token);
     showApp();
-    toast('Signed in as '+me.name,'ok');
-  }catch(e){ errEl.textContent = /Failed to fetch|NetworkError/i.test(e.message) ? "Can't reach the server — open the app URL (Render/Fly or run npm start), not the static pages URL." : e.message; errEl.style.display='block'; }
+    toast("Signed in as " + me.name, "ok");
+  } catch (e2) {
+    errEl.textContent = /Failed to fetch|NetworkError/i.test(e2.message) ? "Can't reach the server \u2014 open the app URL (Render/Fly or run npm start), not the static pages URL." : e2.message;
+    errEl.style.display = "block";
+  }
 }
-async function logout(){
-  try{ await api('/api/auth/logout',{method:'POST'}) }catch{}
-  token=''; me=null; localStorage.removeItem('tapflow_token');
-  document.getElementById('loginBtn').classList.remove('hidden');
-  document.getElementById('logoutBtn').classList.add('hidden');
-  document.getElementById('userBadge').classList.add('hidden');
+async function logout() {
+  try {
+    await api("/api/auth/logout", { method: "POST" });
+  } catch (e) {
+  }
+  token = "";
+  me = null;
+  localStorage.removeItem("tapflow_token");
+  document.getElementById("loginBtn").classList.remove("hidden");
+  document.getElementById("logoutBtn").classList.add("hidden");
+  document.getElementById("userBadge").classList.add("hidden");
   showLogin();
 }
-async function checkMe(){
-  if(!token) return;
-  try{ const d=await api('/api/auth/me'); me=d.user; showApp(); }catch{ token=''; localStorage.removeItem('tapflow_token'); }
+async function checkMe() {
+  if (!token) return;
+  try {
+    const d = await api("/api/auth/me");
+    me = d.user;
+    showApp();
+  } catch (e) {
+    token = "";
+    localStorage.removeItem("tapflow_token");
+  }
 }
-async function updateAdyenBadge(){
-  try{
-    const s=await fetch('/api/settings/adyen-status').then(r=>r.json());
-    const el=document.getElementById('adyenBadge');
-    if(s.configured){ el.textContent='Payments Secure • '+s.env.toUpperCase(); el.className='badge badge-teal'; }
-    else { el.textContent='Payments Ready • Cash Enabled'; el.className='badge badge-teal'; }
-    const envB=document.getElementById('envBadge'); if(envB) envB.textContent=s.configured? s.env.toUpperCase()+' • LIVE READY' : 'SECURE • LIVE';
-    const posNotice=document.getElementById('posAdyenNotice'); if(posNotice) posNotice.style.display='none';
-  }catch{}
+async function updateAdyenBadge() {
+  try {
+    const s = await fetch("/api/settings/adyen-status").then((r) => r.json());
+    const el = document.getElementById("adyenBadge");
+    if (s.configured) {
+      el.textContent = "Payments Secure \u2022 " + s.env.toUpperCase();
+      el.className = "badge badge-teal";
+    } else {
+      el.textContent = "Payments Ready \u2022 Cash Enabled";
+      el.className = "badge badge-teal";
+    }
+    const envB = document.getElementById("envBadge");
+    if (envB) envB.textContent = s.configured ? s.env.toUpperCase() + " \u2022 LIVE READY" : "SECURE \u2022 LIVE";
+    const posNotice = document.getElementById("posAdyenNotice");
+    if (posNotice) posNotice.style.display = "none";
+  } catch (e) {
+  }
 }
-
-// Products
-async function fetchProducts(){
-  try{ products = await api('/api/products'); document.getElementById('prodCount').textContent = products.length+' items'; renderProducts(); renderProductsTable(); }catch(e){ toast(e.message,'err') }
+async function fetchProducts() {
+  try {
+    products = await api("/api/products");
+    document.getElementById("prodCount").textContent = products.length + " items";
+    renderProducts();
+    renderProductsTable();
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-function renderProducts(){
-  const grid=document.getElementById('productGrid'); const loc=document.getElementById('locationSelect').value; const q=(document.getElementById('searchInput')?.value||'').toLowerCase();
-  let list=[...products];
-  if(currentCategory!=='all') list=list.filter(p=> (p.category||'').toLowerCase()===currentCategory.toLowerCase());
-  if(loc!=='all') list=list.filter(p=> (p.location||'').toLowerCase()===loc);
-  if(q) list=list.filter(p=> p.name.toLowerCase().includes(q) || (p.sku||'').toLowerCase().includes(q));
-  document.getElementById('prodCount').textContent=list.length+' items';
-  document.getElementById('categoryList').innerHTML=['all','Admission','Food','Merch','Games','Bundles','General'].map(c=>{
-    const active=(currentCategory===c); const count=c==='all'?products.length:products.filter(p=>(p.category||'').toLowerCase()===c.toLowerCase()).length;
-    return `<button class="category-pill ${active?'active':''}" onclick="currentCategory='${c}';renderProducts()"><span>${c}</span><small>${count}</small></button>`;
-  }).join('');
-  if(list.length===0){ grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--muted)">No products</div>'; return; }
-  grid.innerHTML=list.map(p=>`
+function renderProducts() {
+  var _a;
+  const grid = document.getElementById("productGrid");
+  const loc = document.getElementById("locationSelect").value;
+  const q = (((_a = document.getElementById("searchInput")) == null ? void 0 : _a.value) || "").toLowerCase();
+  let list = [...products];
+  if (currentCategory !== "all") list = list.filter((p) => (p.category || "").toLowerCase() === currentCategory.toLowerCase());
+  if (loc !== "all") list = list.filter((p) => (p.location || "").toLowerCase() === loc);
+  if (q) list = list.filter((p) => p.name.toLowerCase().includes(q) || (p.sku || "").toLowerCase().includes(q));
+  document.getElementById("prodCount").textContent = list.length + " items";
+  document.getElementById("categoryList").innerHTML = ["all", "Admission", "Food", "Merch", "Games", "Bundles", "General"].map((c) => {
+    const active = currentCategory === c;
+    const count = c === "all" ? products.length : products.filter((p) => (p.category || "").toLowerCase() === c.toLowerCase()).length;
+    return `<button class="category-pill ${active ? "active" : ""}" onclick="currentCategory='${c}';renderProducts()"><span>${c}</span><small>${count}</small></button>`;
+  }).join("");
+  if (list.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--muted)">No products</div>';
+    return;
+  }
+  grid.innerHTML = list.map((p) => `
     <div class="tile" onclick="addToCart('${p.id}')">
-      <div class="tile-img">${p.image||'📦'}</div>
-      <div class="tile-info"><div class="tile-name">${p.name} ${(p.inventory_unlimited||p.unlimited)?'<span title="Unlimited" style="background:#E6FFF9;border:1px solid #BFEDE3;padding:1px 6px;border-radius:999px;font-size:10px">♾️</span>':''}</div><div class="tile-meta">${p.category} • ${p.location} • ${p.sku||''}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="price">$${Number(p.price).toFixed(2)}</span><span style="font-size:11px;color:${(p.inventory_unlimited||p.unlimited)?'#0A9B7A':p.inventory>10?'#0A9B7A':p.inventory>0?'#E85E2A':'#6B7A90'}">${(p.inventory_unlimited||p.unlimited)?'♾️ Unlimited':(p.inventory>0?p.inventory+' in stock':'Out of stock')}</span></div></div>
+      <div class="tile-img">${p.image || "\u{1F4E6}"}</div>
+      <div class="tile-info"><div class="tile-name">${p.name} ${p.inventory_unlimited || p.unlimited ? '<span title="Unlimited" style="background:#E6FFF9;border:1px solid #BFEDE3;padding:1px 6px;border-radius:999px;font-size:10px">\u267E\uFE0F</span>' : ""}</div><div class="tile-meta">${p.category} \u2022 ${p.location} \u2022 ${p.sku || ""}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span class="price">$${Number(p.price).toFixed(2)}</span><span style="font-size:11px;color:${p.inventory_unlimited || p.unlimited ? "#0A9B7A" : p.inventory > 10 ? "#0A9B7A" : p.inventory > 0 ? "#E85E2A" : "#6B7A90"}">${p.inventory_unlimited || p.unlimited ? "\u267E\uFE0F Unlimited" : p.inventory > 0 ? p.inventory + " in stock" : "Out of stock"}</span></div></div>
     </div>
-  `).join('');
+  `).join("");
 }
-function renderProductsTable(){
-  const tbody=document.getElementById('productsTable');
-  if(!tbody) return;
-  tbody.innerHTML=products.map(p=>`
-    <tr><td><b>${p.name}</b><div style="font-size:11px;color:var(--muted)">${p.description||''} ${(p.inventory_unlimited||p.unlimited)?'<span style="background:#E6FFF9;border:1px solid #BFEDE3;padding:2px 6px;border-radius:999px;font-size:10px">♾️ Unlimited</span>':''}</div></td><td><b>$${Number(p.price).toFixed(2)}</b></td><td>${(p.inventory_unlimited||p.unlimited)?'<b style="color:var(--teal)">♾️ Unlimited</b>':p.inventory}</td><td><span style="font-size:11px;padding:4px 8px;background:#F8F9FB;border:1px solid var(--border);border-radius:999px">${p.category}</span> <span style="font-size:11px">${p.location}</span></td><td style="font-family:monospace;font-size:12px">${p.sku||''}</td><td><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="openProductModal('${p.id}')">Edit</button><button class="btn btn-ghost btn-sm" onclick="deleteProduct('${p.id}')">Delete</button></div></td></tr>
-  `).join('');
+function renderProductsTable() {
+  const tbody = document.getElementById("productsTable");
+  if (!tbody) return;
+  tbody.innerHTML = products.map((p) => `
+    <tr><td><b>${p.name}</b><div style="font-size:11px;color:var(--muted)">${p.description || ""} ${p.inventory_unlimited || p.unlimited ? '<span style="background:#E6FFF9;border:1px solid #BFEDE3;padding:2px 6px;border-radius:999px;font-size:10px">\u267E\uFE0F Unlimited</span>' : ""}</div></td><td><b>$${Number(p.price).toFixed(2)}</b></td><td>${p.inventory_unlimited || p.unlimited ? '<b style="color:var(--teal)">\u267E\uFE0F Unlimited</b>' : p.inventory}</td><td><span style="font-size:11px;padding:4px 8px;background:#F8F9FB;border:1px solid var(--border);border-radius:999px">${p.category}</span> <span style="font-size:11px">${p.location}</span></td><td style="font-family:monospace;font-size:12px">${p.sku || ""}</td><td><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="openProductModal('${p.id}')">Edit</button><button class="btn btn-ghost btn-sm" onclick="deleteProduct('${p.id}')">Delete</button></div></td></tr>
+  `).join("");
 }
-function addToCart(id){
-  const prod=products.find(p=>p.id===id); if(!prod) return;
-  if(!(prod.inventory_unlimited||prod.unlimited) && prod.inventory!==null && prod.inventory<=0){ toast('Out of stock','err'); return; }
-  const ex=cart.find(c=>c.id===id); if(ex) ex.qty++; else cart.push({id:prod.id, name:prod.name, price:Number(prod.price), qty:1, image:prod.image});
+function addToCart(id) {
+  const prod = products.find((p) => p.id === id);
+  if (!prod) return;
+  if (!(prod.inventory_unlimited || prod.unlimited) && prod.inventory !== null && prod.inventory <= 0) {
+    toast("Out of stock", "err");
+    return;
+  }
+  const ex = cart.find((c) => c.id === id);
+  if (ex) ex.qty++;
+  else cart.push({ id: prod.id, name: prod.name, price: Number(prod.price), qty: 1, image: prod.image });
   renderCart();
 }
-function renderCart(){
-  const wrap=document.getElementById('cartItems'); const empty=document.getElementById('cartEmpty'); const sum=document.getElementById('orderSummary');
-  const badge=document.getElementById('cartBadge');
-  const count=cart.reduce((a,c)=>a+c.qty,0);
-  badge.textContent=count?count+' items':'0 items';
-  if(cart.length===0){ wrap.innerHTML=''; empty.classList.remove('hidden'); sum.classList.add('hidden'); updateCharge(); return; }
-  empty.classList.add('hidden'); sum.classList.remove('hidden');
-  wrap.innerHTML=cart.map(c=>`
-    <div class="cart-item"><div style="width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid var(--border);display:grid;place-items:center">${c.image||'📦'}</div><div style="flex:1"><div style="font-size:13px;font-weight:750">${c.name}</div><div style="font-size:11px;color:var(--muted)">$${c.price.toFixed(2)} each</div></div><div class="qty"><button onclick="changeQty('${c.id}',-1)">−</button><span style="font-size:12px;font-weight:800;min-width:14px;text-align:center">${c.qty}</span><button onclick="changeQty('${c.id}',1)">+</button></div><div style="text-align:right;min-width:60px"><b style="font-size:12px">$${(c.price*c.qty).toFixed(2)}</b><br><button onclick="removeItem('${c.id}')" style="font-size:11px;color:var(--muted);background:none;border:none;font-weight:700">Remove</button></div></div>
-  `).join('');
-  const subtotal=cart.reduce((a,c)=>a+c.price*c.qty,0);
-  const taxRate=Number(settingsCache?.tax_rate ?? 8.5);
-  const tax=subtotal*(taxRate/100);
-  const total=subtotal+tax;
-  document.getElementById('subtotal').textContent='$'+subtotal.toFixed(2);
-  document.getElementById('tax').textContent='$'+tax.toFixed(2);
-  document.getElementById('taxRateLabel').textContent=taxRate+'%';
-  document.getElementById('discount').textContent='-$0.00';
-  document.getElementById('total').textContent='$'+total.toFixed(2);
+function renderCart() {
+  var _a;
+  const wrap = document.getElementById("cartItems");
+  const empty = document.getElementById("cartEmpty");
+  const sum = document.getElementById("orderSummary");
+  const badge = document.getElementById("cartBadge");
+  const count = cart.reduce((a, c) => a + c.qty, 0);
+  badge.textContent = count ? count + " items" : "0 items";
+  if (cart.length === 0) {
+    wrap.innerHTML = "";
+    empty.classList.remove("hidden");
+    sum.classList.add("hidden");
+    updateCharge();
+    return;
+  }
+  empty.classList.add("hidden");
+  sum.classList.remove("hidden");
+  wrap.innerHTML = cart.map((c) => `
+    <div class="cart-item"><div style="width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid var(--border);display:grid;place-items:center">${c.image || "\u{1F4E6}"}</div><div style="flex:1"><div style="font-size:13px;font-weight:750">${c.name}</div><div style="font-size:11px;color:var(--muted)">$${c.price.toFixed(2)} each</div></div><div class="qty"><button onclick="changeQty('${c.id}',-1)">\u2212</button><span style="font-size:12px;font-weight:800;min-width:14px;text-align:center">${c.qty}</span><button onclick="changeQty('${c.id}',1)">+</button></div><div style="text-align:right;min-width:60px"><b style="font-size:12px">$${(c.price * c.qty).toFixed(2)}</b><br><button onclick="removeItem('${c.id}')" style="font-size:11px;color:var(--muted);background:none;border:none;font-weight:700">Remove</button></div></div>
+  `).join("");
+  const subtotal = cart.reduce((a, c) => a + c.price * c.qty, 0);
+  const taxRate = Number((_a = settingsCache == null ? void 0 : settingsCache.tax_rate) != null ? _a : 8.5);
+  const tax = subtotal * (taxRate / 100);
+  const total = subtotal + tax;
+  document.getElementById("subtotal").textContent = "$" + subtotal.toFixed(2);
+  document.getElementById("tax").textContent = "$" + tax.toFixed(2);
+  document.getElementById("taxRateLabel").textContent = taxRate + "%";
+  document.getElementById("discount").textContent = "-$0.00";
+  document.getElementById("total").textContent = "$" + total.toFixed(2);
   updateCharge();
   renderQRCartPreview();
 }
-function changeQty(id,d){ const it=cart.find(c=>c.id===id); if(!it) return; it.qty+=d; if(it.qty<=0) cart=cart.filter(c=>c.id!==id); renderCart(); }
-function removeItem(id){ cart=cart.filter(c=>c.id!==id); renderCart(); }
-function clearCart(){ cart=[]; renderCart(); }
-function selectPay(m){
-  selectedPay=m; document.querySelectorAll('.pay-card').forEach(c=>c.classList.remove('selected')); const el=document.getElementById('pay-'+m); if(el) el.classList.add('selected'); updateCharge();
-  const cashBox=document.getElementById('cashInfoBox'); if(cashBox) cashBox.style.display=(m==='cash')?'block':'none';
+function changeQty(id, d) {
+  const it = cart.find((c) => c.id === id);
+  if (!it) return;
+  it.qty += d;
+  if (it.qty <= 0) cart = cart.filter((c) => c.id !== id);
+  renderCart();
 }
-function cartTotals(){
-  const subtotal=cart.reduce((a,c)=>a+c.price*c.qty,0);
-  const taxRate=Number(settingsCache?.tax_rate ?? 8.5);
-  const tax=subtotal*(taxRate/100);
-  const total=subtotal+tax;
-  return {subtotal, tax, total, taxRate};
+function removeItem(id) {
+  cart = cart.filter((c) => c.id !== id);
+  renderCart();
 }
-function updateCharge(){
-  const {total}=cartTotals();
-  const btn=document.getElementById('chargeBtn');
-  const labels={terminal:'Charge on Adyen Reader →', qr:'Generate QR for Customer →', cash:'Record Cash Payment →', manual:'Charge Card on File →'};
-  btn.textContent=cart.length? `${labels[selectedPay]||'Charge'} $${total.toFixed(2)}` : 'Add items to cart';
-  btn.disabled=cart.length===0;
+function clearCart() {
+  cart = [];
+  renderCart();
 }
-function saveTerminalId(){
-  const v=document.getElementById('terminalIdInput').value.trim();
-  localStorage.setItem('tapflow_terminal', v);
-  toast('Terminal ID saved','ok');
+function selectPay(m) {
+  selectedPay = m;
+  document.querySelectorAll(".pay-card").forEach((c) => c.classList.remove("selected"));
+  const el = document.getElementById("pay-" + m);
+  if (el) el.classList.add("selected");
+  updateCharge();
+  const cashBox = document.getElementById("cashInfoBox");
+  if (cashBox) cashBox.style.display = m === "cash" ? "block" : "none";
 }
-async function handleCharge(){
-  if(cart.length===0) return;
-  const {total, subtotal, tax}=cartTotals();
-  const amountCents=Math.round(total*100);
-  const terminalId=(document.getElementById('terminalIdInput').value.trim() || localStorage.getItem('tapflow_terminal') || '').trim();
-  const customer={name:document.getElementById('custName').value.trim(), email:document.getElementById('custEmail').value.trim()};
-  const reference='TF-'+Date.now().toString(36).toUpperCase();
-
-  if(selectedPay==='terminal'){
-    if(!terminalId){ toast('Enter Terminal ID (e.g. P400Plus-313... ) in the field above','err'); return; }
-    openModal('terminalModal');
-    document.getElementById('terminalAmount').textContent='$'+total.toFixed(2);
-    document.getElementById('terminalMsg').textContent='Contacting Adyen reader '+terminalId+'…';
-    document.getElementById('terminalSub').textContent='If the reader does not light up, check that Adyen is configured in Settings and the terminal is assigned to your store.';
-    document.getElementById('terminalErr').style.display='none';
-    document.getElementById('terminalCloseBtn').style.display='none';
-    try{
-      const resp=await api('/api/terminal/pay',{method:'POST', body:{amount:amountCents, currency:(settingsCache?.currency||'USD'), terminalId, reference, items:cart, customer}});
-      if(resp.status==='captured' || resp.ok){
-        closeModal('terminalModal');
-        toast('Payment captured — printing receipt','ok');
+function cartTotals() {
+  var _a;
+  const subtotal = cart.reduce((a, c) => a + c.price * c.qty, 0);
+  const taxRate = Number((_a = settingsCache == null ? void 0 : settingsCache.tax_rate) != null ? _a : 8.5);
+  const tax = subtotal * (taxRate / 100);
+  const total = subtotal + tax;
+  return { subtotal, tax, total, taxRate };
+}
+function updateCharge() {
+  const { total } = cartTotals();
+  const btn = document.getElementById("chargeBtn");
+  const labels = { terminal: "Charge on Adyen Reader \u2192", qr: "Generate QR for Customer \u2192", cash: "Record Cash Payment \u2192", manual: "Charge Card on File \u2192" };
+  btn.textContent = cart.length ? `${labels[selectedPay] || "Charge"} $${total.toFixed(2)}` : "Add items to cart";
+  btn.disabled = cart.length === 0;
+}
+function saveTerminalId() {
+  const v = document.getElementById("terminalIdInput").value.trim();
+  localStorage.setItem("tapflow_terminal", v);
+  toast("Terminal ID saved", "ok");
+}
+async function handleCharge() {
+  if (cart.length === 0) return;
+  const { total, subtotal, tax } = cartTotals();
+  const amountCents = Math.round(total * 100);
+  const terminalId = (document.getElementById("terminalIdInput").value.trim() || localStorage.getItem("tapflow_terminal") || "").trim();
+  const customer = { name: document.getElementById("custName").value.trim(), email: document.getElementById("custEmail").value.trim() };
+  const reference = "TF-" + Date.now().toString(36).toUpperCase();
+  if (selectedPay === "terminal") {
+    if (!terminalId) {
+      toast("Enter Terminal ID (e.g. P400Plus-313... ) in the field above", "err");
+      return;
+    }
+    openModal("terminalModal");
+    document.getElementById("terminalAmount").textContent = "$" + total.toFixed(2);
+    document.getElementById("terminalMsg").textContent = "Contacting Adyen reader " + terminalId + "\u2026";
+    document.getElementById("terminalSub").textContent = "If the reader does not light up, check that Adyen is configured in Settings and the terminal is assigned to your store.";
+    document.getElementById("terminalErr").style.display = "none";
+    document.getElementById("terminalCloseBtn").style.display = "none";
+    try {
+      const resp = await api("/api/terminal/pay", { method: "POST", body: { amount: amountCents, currency: (settingsCache == null ? void 0 : settingsCache.currency) || "USD", terminalId, reference, items: cart, customer } });
+      if (resp.status === "captured" || resp.ok) {
+        closeModal("terminalModal");
+        toast("Payment captured \u2014 printing receipt", "ok");
         showReceiptFromTx(resp.transaction);
         clearCart();
         fetchTransactions();
         fetchProducts();
-        setTimeout(()=>{ try{ window.print(); }catch{} }, 600);
+        setTimeout(() => {
+          try {
+            window.print();
+          } catch (e) {
+          }
+        }, 600);
       } else {
-        throw new Error('Payment not captured: '+(resp.status||'unknown'));
+        throw new Error("Payment not captured: " + (resp.status || "unknown"));
       }
-    }catch(e){
-      document.getElementById('terminalErr').style.display='block';
-      document.getElementById('terminalErr').innerHTML = `<b>Payment issue</b><div style="margin-top:6px">${e.message}</div><div style="font-size:11px;color:var(--muted);margin-top:6px">Tip: Cash is always available — select Cash payment for instant sale. For cards, check terminal ID in Settings → Payments.</div>`;
-      document.getElementById('terminalMsg').textContent='Payment failed or declined';
-      document.getElementById('terminalCloseBtn').style.display='';
+    } catch (e) {
+      document.getElementById("terminalErr").style.display = "block";
+      document.getElementById("terminalErr").innerHTML = `<b>Payment issue</b><div style="margin-top:6px">${e.message}</div><div style="font-size:11px;color:var(--muted);margin-top:6px">Tip: Cash is always available \u2014 select Cash payment for instant sale. For cards, check terminal ID in Settings \u2192 Payments.</div>`;
+      document.getElementById("terminalMsg").textContent = "Payment failed or declined";
+      document.getElementById("terminalCloseBtn").style.display = "";
     }
     return;
   }
-
-  if(selectedPay==='qr'){
-    try{
-      const resp=await api('/api/qr/create',{method:'POST', body:{amount:amountCents, currency:(settingsCache?.currency||'USD'), items:cart, customerEmail: customer.email }});
-      lastQRId=resp.id;
-      document.getElementById('qrImg').src=resp.qrDataUrl;
-      document.getElementById('qrImg').style.display='block';
-      document.getElementById('qrPlaceholder').style.display='none';
-      document.getElementById('qrLinkWrap').style.display='block';
-      document.getElementById('qrLink').href=resp.payUrl;
-      document.getElementById('qrLink').textContent=resp.payUrl;
-      document.getElementById('qrStatusBadge').textContent='Pending — waiting for customer';
-      document.getElementById('qrStatusBadge').className='badge badge-warn';
-      document.getElementById('qrPollRow').style.display='flex';
-      if(resp.adyenError){
-        document.getElementById('qrAdyenNotice').innerHTML='<div style="background:#E6FFF9;border:1px solid #BFEDE3;border-radius:10px;padding:10px"><b>QR Ready</b><div style="font-size:11px;color:#007A65;margin-top:4px">QR code generated and linked. Customer scans to pay. Card readers use same secure session: <span style="font-family:monospace">/pay/'+resp.id+'</span></div></div>';
+  if (selectedPay === "qr") {
+    try {
+      const resp = await api("/api/qr/create", { method: "POST", body: { amount: amountCents, currency: (settingsCache == null ? void 0 : settingsCache.currency) || "USD", items: cart, customerEmail: customer.email } });
+      lastQRId = resp.id;
+      document.getElementById("qrImg").src = resp.qrDataUrl;
+      document.getElementById("qrImg").style.display = "block";
+      document.getElementById("qrPlaceholder").style.display = "none";
+      document.getElementById("qrLinkWrap").style.display = "block";
+      document.getElementById("qrLink").href = resp.payUrl;
+      document.getElementById("qrLink").textContent = resp.payUrl;
+      document.getElementById("qrStatusBadge").textContent = "Pending \u2014 waiting for customer";
+      document.getElementById("qrStatusBadge").className = "badge badge-warn";
+      document.getElementById("qrPollRow").style.display = "flex";
+      if (resp.adyenError) {
+        document.getElementById("qrAdyenNotice").innerHTML = '<div style="background:#E6FFF9;border:1px solid #BFEDE3;border-radius:10px;padding:10px"><b>QR Ready</b><div style="font-size:11px;color:#007A65;margin-top:4px">QR code generated and linked. Customer scans to pay. Card readers use same secure session: <span style="font-family:monospace">/pay/' + resp.id + "</span></div></div>";
       } else {
-        document.getElementById('qrAdyenNotice').innerHTML='<div style="background:#E6FFF9;border:1px solid #BFEDE3;border-radius:10px;padding:10px"><b>QR Ready • Secure Session</b><div style="font-size:11px;color:#007A65;margin-top:4px">Customer Drop-in will appear at /pay/'+resp.id+'. You will see Paid only after confirmation.</div></div>';
+        document.getElementById("qrAdyenNotice").innerHTML = '<div style="background:#E6FFF9;border:1px solid #BFEDE3;border-radius:10px;padding:10px"><b>QR Ready \u2022 Secure Session</b><div style="font-size:11px;color:#007A65;margin-top:4px">Customer Drop-in will appear at /pay/' + resp.id + ". You will see Paid only after confirmation.</div></div>";
       }
-      go('qr');
+      go("qr");
       startPollingQR(resp.id);
-      toast('QR generated — show to customer','ok');
-    }catch(e){ toast(e.message,'err') }
+      toast("QR generated \u2014 show to customer", "ok");
+    } catch (e) {
+      toast(e.message, "err");
+    }
     return;
   }
-
-  if(selectedPay==='cash'){
-    if(!confirm('Confirm cash received: $'+total.toFixed(2)+'? This will be recorded as a cash sale (no card reader).')) return;
-    // Create a cash transaction directly via terminal endpoint with a pseudo path? We'll use QR mark-paid flow locally: create a transaction as captured cash via a dedicated endpoint? Easiest: create a pending terminal tx then immediately mark? Better: add a dedicated cash endpoint via existing flow: we will call /api/terminal/pay with a fake terminal that we handle as cash if no Adyen? But spec says never mark paid before processor confirms — for cash, confirmation is cashier confirmation.
-    // We'll implement cash via the same transactions table with status captured but payment_method cash, and require that it is logged as cash, not card.
-    // Use a direct DB insert via a new endpoint? For now, use the QR mark-paid trick: create QR then mark paid as cash? Simpler: call a cash endpoint we add on backend - but we haven't. So we create a transaction via an ad-hoc cash endpoint: POST /api/transactions/cash
-    try{
-      const resp=await fetch('/api/transactions/cash',{method:'POST', headers:headers(), body:JSON.stringify({amount:amountCents, currency:(settingsCache?.currency||'USD'), items:cart, customer})}).then(r=>r.json().then(d=>({ok:r.ok,status:r.status,data:d})));
-      // If endpoint not exists, fallback to local
-      if(!resp.ok || resp.data.error){
-        // fallback: use manual mark via QR session
-        const qr=await api('/api/qr/create',{method:'POST', body:{amount:amountCents, items:cart, customerEmail:customer.email}});
-        await api('/api/qr/'+qr.id+'/mark-paid',{method:'POST'});
-        toast('Cash sale recorded — receipt printing','ok');
-        showReceiptFromTx({reference:qr.reference, items:cart, subtotal, tax, total, payment_method:'cash', created_at:new Date().toISOString()});
-        clearCart(); fetchTransactions(); fetchProducts();
-        setTimeout(()=>{ try{ window.print()}catch{} },400);
+  if (selectedPay === "cash") {
+    if (!confirm("Confirm cash received: $" + total.toFixed(2) + "? This will be recorded as a cash sale (no card reader).")) return;
+    try {
+      const resp = await fetch("/api/transactions/cash", { method: "POST", headers: headers(), body: JSON.stringify({ amount: amountCents, currency: (settingsCache == null ? void 0 : settingsCache.currency) || "USD", items: cart, customer }) }).then((r) => r.json().then((d) => ({ ok: r.ok, status: r.status, data: d })));
+      if (!resp.ok || resp.data.error) {
+        const qr = await api("/api/qr/create", { method: "POST", body: { amount: amountCents, items: cart, customerEmail: customer.email } });
+        await api("/api/qr/" + qr.id + "/mark-paid", { method: "POST" });
+        toast("Cash sale recorded \u2014 receipt printing", "ok");
+        showReceiptFromTx({ reference: qr.reference, items: cart, subtotal, tax, total, payment_method: "cash", created_at: (/* @__PURE__ */ new Date()).toISOString() });
+        clearCart();
+        fetchTransactions();
+        fetchProducts();
+        setTimeout(() => {
+          try {
+            window.print();
+          } catch (e) {
+          }
+        }, 400);
         return;
       }
       showReceiptFromTx(resp.data.transaction);
-      clearCart(); fetchTransactions(); fetchProducts();
-    }catch(e){ toast(e.message,'err') }
+      clearCart();
+      fetchTransactions();
+      fetchProducts();
+    } catch (e) {
+      toast(e.message, "err");
+    }
     return;
   }
-
-  toast('Card-on-file/MOTO: add your Adyen or Stripe MOTO credentials in Settings to enable keyed entry. QR and Terminal are already wired.','err');
+  toast("Card-on-file/MOTO: add your Adyen or Stripe MOTO credentials in Settings to enable keyed entry. QR and Terminal are already wired.", "err");
 }
-
-// Products CRUD
-let editingProductId=null;
-function openProductModal(id){
-  editingProductId=id||null;
-  document.getElementById('productModalTitle').textContent= id?'Edit Product':'New Product';
-  const unlEl=document.getElementById('pUnlimited');
-  if(id){
-    const p=products.find(x=>x.id===id);
-    document.getElementById('pName').value=p.name; document.getElementById('pDesc').value=p.description||''; document.getElementById('pPrice').value=p.price; document.getElementById('pInv').value=p.inventory; document.getElementById('pCat').value=p.category||'General'; document.getElementById('pLoc').value=p.location||'gate'; document.getElementById('pSku').value=p.sku||''; document.getElementById('pImage').value=p.image||'';
-    unlEl.checked=!!(p.inventory_unlimited||p.unlimited); document.getElementById('pInv').disabled=unlEl.checked;
+let editingProductId = null;
+function openProductModal(id) {
+  editingProductId = id || null;
+  document.getElementById("productModalTitle").textContent = id ? "Edit Product" : "New Product";
+  const unlEl = document.getElementById("pUnlimited");
+  if (id) {
+    const p = products.find((x) => x.id === id);
+    document.getElementById("pName").value = p.name;
+    document.getElementById("pDesc").value = p.description || "";
+    document.getElementById("pPrice").value = p.price;
+    document.getElementById("pInv").value = p.inventory;
+    document.getElementById("pCat").value = p.category || "General";
+    document.getElementById("pLoc").value = p.location || "gate";
+    document.getElementById("pSku").value = p.sku || "";
+    document.getElementById("pImage").value = p.image || "";
+    unlEl.checked = !!(p.inventory_unlimited || p.unlimited);
+    document.getElementById("pInv").disabled = unlEl.checked;
   } else {
-    ['pName','pDesc','pPrice','pInv','pSku','pImage'].forEach(k=>document.getElementById(k).value='');
-    document.getElementById('pCat').value='General'; document.getElementById('pLoc').value='gate';
-    unlEl.checked=false; document.getElementById('pInv').disabled=false; document.getElementById('pInv').placeholder='Inventory';
+    ["pName", "pDesc", "pPrice", "pInv", "pSku", "pImage"].forEach((k) => document.getElementById(k).value = "");
+    document.getElementById("pCat").value = "General";
+    document.getElementById("pLoc").value = "gate";
+    unlEl.checked = false;
+    document.getElementById("pInv").disabled = false;
+    document.getElementById("pInv").placeholder = "Inventory";
   }
-  openModal('productModal');
+  openModal("productModal");
 }
-async function saveProduct(){
-  const body={name:document.getElementById('pName').value.trim(), description:document.getElementById('pDesc').value.trim(), price:document.getElementById('pPrice').value, inventory:document.getElementById('pInv').value, inventory_unlimited: document.getElementById('pUnlimited').checked, category:document.getElementById('pCat').value, location:document.getElementById('pLoc').value, sku:document.getElementById('pSku').value.trim(), image:document.getElementById('pImage').value.trim()||'📦'};
-  if(!body.name || body.price==='') { toast('Name and price required','err'); return; }
-  try{
-    if(editingProductId) await api('/api/products/'+editingProductId,{method:'PUT', body});
-    else await api('/api/products',{method:'POST', body});
-    closeModal('productModal'); fetchProducts(); toast('Product saved ♾️','ok');
-  }catch(e){ toast(e.message,'err') }
+async function saveProduct() {
+  const body = { name: document.getElementById("pName").value.trim(), description: document.getElementById("pDesc").value.trim(), price: document.getElementById("pPrice").value, inventory: document.getElementById("pInv").value, inventory_unlimited: document.getElementById("pUnlimited").checked, category: document.getElementById("pCat").value, location: document.getElementById("pLoc").value, sku: document.getElementById("pSku").value.trim(), image: document.getElementById("pImage").value.trim() || "\u{1F4E6}" };
+  if (!body.name || body.price === "") {
+    toast("Name and price required", "err");
+    return;
+  }
+  try {
+    if (editingProductId) await api("/api/products/" + editingProductId, { method: "PUT", body });
+    else await api("/api/products", { method: "POST", body });
+    closeModal("productModal");
+    fetchProducts();
+    toast("Product saved \u267E\uFE0F", "ok");
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-async function deleteProduct(id){ if(!confirm('Delete this product?')) return; try{ await api('/api/products/'+id,{method:'DELETE'}); fetchProducts(); toast('Deleted','ok'); }catch(e){ toast(e.message,'err') } }
-
-// Transactions
-async function fetchTransactions(){
-  try{
-    const txs=await api('/api/transactions');
-    const tbody=document.getElementById('txTable');
-    const totalRev=txs.filter(t=>t.status==='captured').reduce((a,t)=>a+Number(t.total||t.amount/100),0);
-    const cap=txs.filter(t=>t.status==='captured').length;
-    const pend=txs.filter(t=>['pending','error','refused'].includes(t.status)).length;
-    document.getElementById('statRev').textContent='$'+totalRev.toFixed(2);
-    document.getElementById('statTx').textContent=txs.length;
-    document.getElementById('statCap').textContent=cap;
-    document.getElementById('statCapSub').textContent= txs.length? Math.round(cap/txs.length*100)+'% success' : '0%';
-    document.getElementById('statPend').textContent=pend;
-    tbody.innerHTML=txs.map(t=>{
-      const items=(t.items||[]).map(i=>`${i.name}×${i.qty}`).join(', ');
-      const statusColor={captured:'#E6FFF9', pending:'#FFF4CC', refunded:'#EFF3F8', refused:'#FFE8E1', error:'#FFE8E1', cancelled:'#FFE8E1'}[t.status]||'#F8F9FB';
-      const statusText={captured:'Captured (Paid)', pending:'Pending — not yet confirmed', refunded:'Refunded', refused:'Declined', error:'Error', cancelled:'Cancelled'}[t.status]||t.status;
-      return `<tr><td style="white-space:nowrap">${new Date(t.created_at).toLocaleString()}</td><td style="font-family:monospace;font-size:11px">${t.reference}</td><td style="max-width:260px">${items}</td><td><span style="font-size:11px;padding:4px 8px;background:#F8F9FB;border:1px solid var(--border);border-radius:999px">${t.payment_method||''}</span><div style="font-size:11px;color:var(--muted)">${t.cashier_name||''} ${t.terminal_id? '• '+t.terminal_id:''}</div></td><td><b>$${Number(t.total||0).toFixed(2)}</b><div style="font-size:11px;color:var(--muted)">$${(Number(t.amount)/100).toFixed(2)} ${t.currency}</div></td><td><span style="padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800;background:${statusColor};border:1px solid var(--border)">${statusText}</span></td><td><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="viewTx('${t.id}')">Receipt</button>${t.status==='captured'?`<button class="btn btn-ghost btn-sm" onclick="refundTx('${t.id}')">Refund</button>`:''}</div></td></tr>`;
-    }).join('');
-  }catch(e){ toast(e.message,'err') }
+async function deleteProduct(id) {
+  if (!confirm("Delete this product?")) return;
+  try {
+    await api("/api/products/" + id, { method: "DELETE" });
+    fetchProducts();
+    toast("Deleted", "ok");
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-async function viewTx(id){
-  try{
-    const t=await api('/api/transactions/'+id);
+async function fetchTransactions() {
+  try {
+    const txs = await api("/api/transactions");
+    const tbody = document.getElementById("txTable");
+    const totalRev = txs.filter((t) => t.status === "captured").reduce((a, t) => a + Number(t.total || t.amount / 100), 0);
+    const cap = txs.filter((t) => t.status === "captured").length;
+    const pend = txs.filter((t) => ["pending", "error", "refused"].includes(t.status)).length;
+    document.getElementById("statRev").textContent = "$" + totalRev.toFixed(2);
+    document.getElementById("statTx").textContent = txs.length;
+    document.getElementById("statCap").textContent = cap;
+    document.getElementById("statCapSub").textContent = txs.length ? Math.round(cap / txs.length * 100) + "% success" : "0%";
+    document.getElementById("statPend").textContent = pend;
+    tbody.innerHTML = txs.map((t) => {
+      const items = (t.items || []).map((i) => `${i.name}\xD7${i.qty}`).join(", ");
+      const statusColor = { captured: "#E6FFF9", pending: "#FFF4CC", refunded: "#EFF3F8", refused: "#FFE8E1", error: "#FFE8E1", cancelled: "#FFE8E1" }[t.status] || "#F8F9FB";
+      const statusText = { captured: "Captured (Paid)", pending: "Pending \u2014 not yet confirmed", refunded: "Refunded", refused: "Declined", error: "Error", cancelled: "Cancelled" }[t.status] || t.status;
+      return `<tr><td style="white-space:nowrap">${new Date(t.created_at).toLocaleString()}</td><td style="font-family:monospace;font-size:11px">${t.reference}</td><td style="max-width:260px">${items}</td><td><span style="font-size:11px;padding:4px 8px;background:#F8F9FB;border:1px solid var(--border);border-radius:999px">${t.payment_method || ""}</span><div style="font-size:11px;color:var(--muted)">${t.cashier_name || ""} ${t.terminal_id ? "\u2022 " + t.terminal_id : ""}</div></td><td><b>$${Number(t.total || 0).toFixed(2)}</b><div style="font-size:11px;color:var(--muted)">$${(Number(t.amount) / 100).toFixed(2)} ${t.currency}</div></td><td><span style="padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800;background:${statusColor};border:1px solid var(--border)">${statusText}</span></td><td><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="viewTx('${t.id}')">Receipt</button>${t.status === "captured" ? `<button class="btn btn-ghost btn-sm" onclick="refundTx('${t.id}')">Refund</button>` : ""}</div></td></tr>`;
+    }).join("");
+  } catch (e) {
+    toast(e.message, "err");
+  }
+}
+async function viewTx(id) {
+  try {
+    const t = await api("/api/transactions/" + id);
     showReceiptFromTx(t);
-  }catch(e){ toast(e.message,'err') }
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-async function refundTx(id){
-  if(!confirm('Refund this transaction? This will call Adyen for card payments.')) return;
-  try{ const r=await api('/api/transactions/'+id+'/refund',{method:'POST'}); toast('Refunded: '+(r.status||'refunded'),'ok'); fetchTransactions(); }catch(e){ toast(e.message,'err') }
+async function refundTx(id) {
+  if (!confirm("Refund this transaction? This will call Adyen for card payments.")) return;
+  try {
+    const r = await api("/api/transactions/" + id + "/refund", { method: "POST" });
+    toast("Refunded: " + (r.status || "refunded"), "ok");
+    fetchTransactions();
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-function exportCSV(){
-  fetch('/api/transactions',{headers:headers()}).then(r=>r.json()).then(txs=>{
-    const header=['id','reference','created_at','items','payment_method','status','total','currency','cashier','terminal_id','psp'];
-    const rows=txs.map(t=>[t.id,t.reference,t.created_at,(t.items||[]).map(i=>i.name+' x'+i.qty).join('; '),t.payment_method,t.status,t.total,t.currency,t.cashier_name,t.terminal_id,t.adyen_psp]);
-    const csv=[header.join(','), ...rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(','))].join('\n');
-    const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='tapflow-transactions.csv'; a.click(); URL.revokeObjectURL(url); toast('CSV exported','ok');
+function exportCSV() {
+  fetch("/api/transactions", { headers: headers() }).then((r) => r.json()).then((txs) => {
+    const header = ["id", "reference", "created_at", "items", "payment_method", "status", "total", "currency", "cashier", "terminal_id", "psp"];
+    const rows = txs.map((t) => [t.id, t.reference, t.created_at, (t.items || []).map((i) => i.name + " x" + i.qty).join("; "), t.payment_method, t.status, t.total, t.currency, t.cashier_name, t.terminal_id, t.adyen_psp]);
+    const csv = [header.join(","), ...rows.map((r) => r.map((v) => `"${String(v != null ? v : "").replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tapflow-transactions.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast("CSV exported", "ok");
   });
 }
-function showReceiptFromTx(t){
-  const store=settingsCache?.store_name||'TapFlow Park';
-  const head=settingsCache?.receipt_header||store;
-  const foot=settingsCache?.receipt_footer||'Thank you! Visit again';
-  const date=t.created_at? new Date(t.created_at).toLocaleString(): new Date().toLocaleString();
-  const items=(t.items||[]).map(i=>`<div style="display:flex;justify-content:space-between"><span>${i.name} ×${i.qty}</span><b>$${(Number(i.price)*Number(i.qty)).toFixed(2)}</b></div>`).join('');
-  const sub=t.subtotal!=null? Number(t.subtotal).toFixed(2) : (Number(t.total||0) - Number(t.tax||0)).toFixed(2);
-  const tax=t.tax!=null? Number(t.tax).toFixed(2) : '0.00';
-  const total=t.total!=null? Number(t.total).toFixed(2) : (Number(t.amount)/100).toFixed(2);
-  lastReceiptTx=t;
-  document.getElementById('receiptBox').innerHTML=`
-    <div style="text-align:center;border-bottom:1px dashed var(--border);padding-bottom:10px"><b style="font-size:14px">${head}</b><br><span style="font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase">${store} • ${date}</span><br><span style="font-size:10px;color:var(--muted)">${t.reference||''} • ${t.payment_method||''} • ${t.cashier_name||''}</span></div>
+function showReceiptFromTx(t) {
+  const store = (settingsCache == null ? void 0 : settingsCache.store_name) || "TapFlow Park";
+  const head = (settingsCache == null ? void 0 : settingsCache.receipt_header) || store;
+  const foot = (settingsCache == null ? void 0 : settingsCache.receipt_footer) || "Thank you! Visit again";
+  const date = t.created_at ? new Date(t.created_at).toLocaleString() : (/* @__PURE__ */ new Date()).toLocaleString();
+  const items = (t.items || []).map((i) => `<div style="display:flex;justify-content:space-between"><span>${i.name} \xD7${i.qty}</span><b>$${(Number(i.price) * Number(i.qty)).toFixed(2)}</b></div>`).join("");
+  const sub = t.subtotal != null ? Number(t.subtotal).toFixed(2) : (Number(t.total || 0) - Number(t.tax || 0)).toFixed(2);
+  const tax = t.tax != null ? Number(t.tax).toFixed(2) : "0.00";
+  const total = t.total != null ? Number(t.total).toFixed(2) : (Number(t.amount) / 100).toFixed(2);
+  lastReceiptTx = t;
+  document.getElementById("receiptBox").innerHTML = `
+    <div style="text-align:center;border-bottom:1px dashed var(--border);padding-bottom:10px"><b style="font-size:14px">${head}</b><br><span style="font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase">${store} \u2022 ${date}</span><br><span style="font-size:10px;color:var(--muted)">${t.reference || ""} \u2022 ${t.payment_method || ""} \u2022 ${t.cashier_name || ""}</span></div>
     <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">${items}</div>
     <div style="margin-top:10px;border-top:1px dashed var(--border);padding-top:10px;display:flex;flex-direction:column;gap:4px">
       <div style="display:flex;justify-content:space-between"><span>Subtotal</span><b>$${sub}</b></div>
       <div style="display:flex;justify-content:space-between"><span>Tax</span><b>$${tax}</b></div>
       <div style="display:flex;justify-content:space-between;font-weight:900;font-size:14px;border-top:1px dashed var(--border);padding-top:6px;margin-top:6px"><span>Total</span><span>$${total}</span></div>
-      <div style="display:flex;justify-content:space-between;margin-top:6px;background:#F8F9FB;border:1px solid var(--border);border-radius:8px;padding:8px"><span style="font-size:11px;font-weight:700">Status: ${(t.status||'captured').toUpperCase()}</span><span style="font-size:11px">${t.adyen_psp? 'PSP '+t.adyen_psp.slice(-8):''}</span></div>
-      <div style="text-align:center;margin-top:10px;font-size:10px;color:var(--muted)">${foot}<br>Receipt #${t.reference||t.id}</div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;background:#F8F9FB;border:1px solid var(--border);border-radius:8px;padding:8px"><span style="font-size:11px;font-weight:700">Status: ${(t.status || "captured").toUpperCase()}</span><span style="font-size:11px">${t.adyen_psp ? "PSP " + t.adyen_psp.slice(-8) : ""}</span></div>
+      <div style="text-align:center;margin-top:10px;font-size:10px;color:var(--muted)">${foot}<br>Receipt #${t.reference || t.id}</div>
     </div>`;
-  openModal('receiptModal');
-  setTimeout(()=>{ if(t.status==='captured'){ try{ window.print(); }catch{} } }, 500);
+  openModal("receiptModal");
+  setTimeout(() => {
+    if (t.status === "captured") {
+      try {
+        window.print();
+      } catch (e) {
+      }
+    }
+  }, 500);
 }
-function openReceiptPreview(){ showReceiptFromTx({reference:'PREVIEW-'+Date.now().toString(36).toUpperCase(), items:[{name:'Day Pass Adult',price:29,qty:1},{name:'Burger Combo',price:12.5,qty:2}], subtotal:54, tax:4.59, total:58.59, status:'captured', payment_method:'preview', cashier_name:me?me.name:'Test', created_at:new Date().toISOString(), adyen_psp:'-preview'}); }
-let lastReceiptTx=null;
-async function emailReceipt(){
-  if(!lastReceiptTx || !lastReceiptTx.id){ toast('Open a saved transaction first, then click Email','err'); return; }
-  const to=prompt('Email receipt to?', lastReceiptTx.customer_email||''); if(!to) return;
-  try{ const r=await api('/api/transactions/'+lastReceiptTx.id+'/email-receipt',{method:'POST', body:{email:to}}); toast(r.sent? ('Receipt emailed to '+to) : (r.reason||'Receipt email saved — add SMTP settings to deliver it'),'ok'); }catch(e){ toast(e.message,'err') }
+function openReceiptPreview() {
+  showReceiptFromTx({ reference: "PREVIEW-" + Date.now().toString(36).toUpperCase(), items: [{ name: "Day Pass Adult", price: 29, qty: 1 }, { name: "Burger Combo", price: 12.5, qty: 2 }], subtotal: 54, tax: 4.59, total: 58.59, status: "captured", payment_method: "preview", cashier_name: me ? me.name : "Test", created_at: (/* @__PURE__ */ new Date()).toISOString(), adyen_psp: "-preview" });
 }
-
-// QR
-function renderQRCartPreview(){
-  const el=document.getElementById('qrCartPreview'); if(!el) return;
-  if(cart.length===0){ el.innerHTML='<span style="color:var(--muted)">Cart empty — add items in POS first</span>'; return; }
-  const {total, subtotal, tax}=cartTotals();
-  el.innerHTML=cart.map(c=>`<div style="display:flex;justify-content:space-between"><span>${c.name} ×${c.qty}</span><b>$${(c.price*c.qty).toFixed(2)}</b></div>`).join('')+`<div style="border-top:1px dashed var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:900"><span>Total</span><span>$${total.toFixed(2)}</span></div>`;
-}
-async function createQRFromCart(){
-  if(cart.length===0){ toast('Add items to cart first','err'); go('pos'); return; }
-  const {total}=cartTotals();
-  const amountCents=Math.round(total*100);
-  try{
-    const resp=await api('/api/qr/create',{method:'POST', body:{amount:amountCents, items:cart, customerEmail:document.getElementById('custEmail').value.trim()}});
-    lastQRId=resp.id;
-    document.getElementById('qrImg').src=resp.qrDataUrl;
-    document.getElementById('qrImg').style.display='block';
-    document.getElementById('qrPlaceholder').style.display='none';
-    document.getElementById('qrLinkWrap').style.display='block';
-    document.getElementById('qrLink').href=resp.payUrl; document.getElementById('qrLink').textContent=resp.payUrl;
-    document.getElementById('qrStatusBadge').textContent='Pending';
-    document.getElementById('qrStatusBadge').className='badge badge-warn';
-    document.getElementById('qrPollRow').style.display='flex';
-    startPollingQR(resp.id);
-    toast('QR ready — show to customer','ok');
-  }catch(e){ toast(e.message,'err') }
-}
-let qrListPoll=null;
-async function loadPaySession(){
-  const match=location.hash.match(/#pay\/(.+)/) || location.pathname.match(/\/pay\/(.+)/);
-  let id=null;
-  if(match) id=match[1].split('?')[0].split('#')[0];
-  else {
-    const pathId=location.pathname.split('/pay/')[1];
-    if(pathId) id=pathId.split('?')[0].split('/')[0];
+let lastReceiptTx = null;
+async function emailReceipt() {
+  if (!lastReceiptTx || !lastReceiptTx.id) {
+    toast("Open a saved transaction first, then click Email", "err");
+    return;
   }
-  if(!id) return;
-  // Guest mode: this is the customer's pay page — hide site nav; only pay + email receipt
-  document.body.classList.add('paymode');
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.getElementById('view-pay').classList.add('active');
-  document.getElementById('appShell').classList.add('hidden');
-  document.getElementById('view-login').style.display='none';
-  window.scrollTo(0,0);
-  try{
-    const s=await fetch('/api/qr/'+id).then(r=>r.json());
-    if(s.error) throw new Error(s.error);
-    const total='$'+(s.amount/100).toFixed(2);
-    const emailBox=document.getElementById('payEmailReceipt');
-    if(s.status==='paid'){
-      document.getElementById('paySessionInfo').innerHTML='<div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:34px">✅</span><b style="color:#007A65;font-size:17px">Paid — thank you!</b><span style="font-size:12px;color:var(--muted)">Order '+s.reference+'</span></div>';
-      document.getElementById('payAdyenMount').innerHTML='';
-      document.getElementById('payFallback').innerHTML='';
-      emailBox.style.display='block';
+  const to = prompt("Email receipt to?", lastReceiptTx.customer_email || "");
+  if (!to) return;
+  try {
+    const r = await api("/api/transactions/" + lastReceiptTx.id + "/email-receipt", { method: "POST", body: { email: to } });
+    toast(r.sent ? "Receipt emailed to " + to : r.reason || "Receipt email saved \u2014 add SMTP settings to deliver it", "ok");
+  } catch (e) {
+    toast(e.message, "err");
+  }
+}
+function renderQRCartPreview() {
+  const el = document.getElementById("qrCartPreview");
+  if (!el) return;
+  if (cart.length === 0) {
+    el.innerHTML = '<span style="color:var(--muted)">Cart empty \u2014 add items in POS first</span>';
+    return;
+  }
+  const { total, subtotal, tax } = cartTotals();
+  el.innerHTML = cart.map((c) => `<div style="display:flex;justify-content:space-between"><span>${c.name} \xD7${c.qty}</span><b>$${(c.price * c.qty).toFixed(2)}</b></div>`).join("") + `<div style="border-top:1px dashed var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:900"><span>Total</span><span>$${total.toFixed(2)}</span></div>`;
+}
+async function createQRFromCart() {
+  if (cart.length === 0) {
+    toast("Add items to cart first", "err");
+    go("pos");
+    return;
+  }
+  const { total } = cartTotals();
+  const amountCents = Math.round(total * 100);
+  try {
+    const resp = await api("/api/qr/create", { method: "POST", body: { amount: amountCents, items: cart, customerEmail: document.getElementById("custEmail").value.trim() } });
+    lastQRId = resp.id;
+    document.getElementById("qrImg").src = resp.qrDataUrl;
+    document.getElementById("qrImg").style.display = "block";
+    document.getElementById("qrPlaceholder").style.display = "none";
+    document.getElementById("qrLinkWrap").style.display = "block";
+    document.getElementById("qrLink").href = resp.payUrl;
+    document.getElementById("qrLink").textContent = resp.payUrl;
+    document.getElementById("qrStatusBadge").textContent = "Pending";
+    document.getElementById("qrStatusBadge").className = "badge badge-warn";
+    document.getElementById("qrPollRow").style.display = "flex";
+    startPollingQR(resp.id);
+    toast("QR ready \u2014 show to customer", "ok");
+  } catch (e) {
+    toast(e.message, "err");
+  }
+}
+let qrListPoll = null;
+async function loadPaySession() {
+  const match = location.hash.match(/#pay\/(.+)/) || location.pathname.match(/\/pay\/(.+)/);
+  let id = null;
+  if (match) id = match[1].split("?")[0].split("#")[0];
+  else {
+    const pathId = location.pathname.split("/pay/")[1];
+    if (pathId) id = pathId.split("?")[0].split("/")[0];
+  }
+  if (!id) return;
+  document.body.classList.add("paymode");
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  document.getElementById("view-pay").classList.add("active");
+  document.getElementById("appShell").classList.add("hidden");
+  document.getElementById("view-login").style.display = "none";
+  window.scrollTo(0, 0);
+  try {
+    const s = await fetch("/api/qr/" + id).then((r) => r.json());
+    if (s.error) throw new Error(s.error);
+    const total = "$" + (s.amount / 100).toFixed(2);
+    const emailBox = document.getElementById("payEmailReceipt");
+    if (s.status === "paid") {
+      document.getElementById("paySessionInfo").innerHTML = '<div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:34px">\u2705</span><b style="color:#007A65;font-size:17px">Paid \u2014 thank you!</b><span style="font-size:12px;color:var(--muted)">Order ' + s.reference + "</span></div>";
+      document.getElementById("payAdyenMount").innerHTML = "";
+      document.getElementById("payFallback").innerHTML = "";
+      emailBox.style.display = "block";
       return;
     }
-    if(s.status==='expired'){
-      document.getElementById('paySessionInfo').innerHTML='<div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:34px">⏳</span><b style="color:#7A2B14;font-size:17px">This QR code expired</b><span style="font-size:12px;color:var(--muted)">Please ask staff to generate a new one.</span></div>';
-      document.getElementById('payAdyenMount').innerHTML='';
-      document.getElementById('payFallback').innerHTML='';
-      emailBox.style.display='none';
+    if (s.status === "expired") {
+      document.getElementById("paySessionInfo").innerHTML = '<div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:34px">\u23F3</span><b style="color:#7A2B14;font-size:17px">This QR code expired</b><span style="font-size:12px;color:var(--muted)">Please ask staff to generate a new one.</span></div>';
+      document.getElementById("payAdyenMount").innerHTML = "";
+      document.getElementById("payFallback").innerHTML = "";
+      emailBox.style.display = "none";
       return;
     }
-    document.getElementById('paySessionInfo').innerHTML='<div style="font-size:12px;color:var(--muted)">Order <b>'+s.reference+'</b> • '+s.currency+' '+total+'</div>';
-    const items=s.items||[];
-    document.getElementById('payItems').innerHTML=items.map(i=>`<div style="display:flex;justify-content:space-between;gap:12px"><span>${i.name} ×${i.qty}</span><b>$${(Number(i.price)*Number(i.qty)).toFixed(2)}</b></div>`).join('') || '<span style="color:var(--muted)">No items</span>';
-    document.getElementById('payTotal').textContent='Total to pay: '+total;
-    emailBox.style.display='none';
-    const cfg=await fetch('/api/settings').then(r=>r.json());
-    const adyenData=s.adyen_session_data;
-    if(adyenData && adyenData.id && cfg.adyen_client_key && !cfg.adyen_client_key.includes('••••') && window.AdyenCheckout){
-      document.getElementById('payFallback').innerHTML='<div style="background:#E6FFF9;border:1px solid #BFEDE3;border-radius:12px;padding:12px;text-align:center;font-size:13px"><b>Secure card payment</b><div style="font-size:12px;color:#007A65;margin-top:4px">Cards, Apple Pay & Google Pay — pay below.</div></div><div id="adyenDropIn" style="margin-top:12px"></div>';
-      try{
-        const checkout=await AdyenCheckout({ clientKey:cfg.adyen_client_key, environment:cfg.adyen_env||'live', session:adyenData, onPaymentCompleted:()=>{ loadPaySession(); } });
-        checkout.create('dropin').mount('#adyenDropIn');
-      }catch(e){
-        document.getElementById('payFallback').innerHTML='<div style="background:#FFF4CC;border:1px solid #FFE8A8;border-radius:12px;padding:14px;text-align:center"><b>Ready to pay '+total+'</b><div style="font-size:12px;color:#7A5A00;margin-top:6px">Please pay at the counter — staff will confirm your payment.</div></div>';
+    document.getElementById("paySessionInfo").innerHTML = '<div style="font-size:12px;color:var(--muted)">Order <b>' + s.reference + "</b> \u2022 " + s.currency + " " + total + "</div>";
+    const items = s.items || [];
+    document.getElementById("payItems").innerHTML = items.map((i) => `<div style="display:flex;justify-content:space-between;gap:12px"><span>${i.name} \xD7${i.qty}</span><b>$${(Number(i.price) * Number(i.qty)).toFixed(2)}</b></div>`).join("") || '<span style="color:var(--muted)">No items</span>';
+    document.getElementById("payTotal").textContent = "Total to pay: " + total;
+    emailBox.style.display = "none";
+    const cfg = await fetch("/api/settings").then((r) => r.json());
+    const adyenData = s.adyen_session_data;
+    if (adyenData && adyenData.id && cfg.adyen_client_key && !cfg.adyen_client_key.includes("\u2022\u2022\u2022\u2022") && window.AdyenCheckout) {
+      document.getElementById("payFallback").innerHTML = '<div style="background:#E6FFF9;border:1px solid #BFEDE3;border-radius:12px;padding:12px;text-align:center;font-size:13px"><b>Secure card payment</b><div style="font-size:12px;color:#007A65;margin-top:4px">Cards, Apple Pay & Google Pay \u2014 pay below.</div></div><div id="adyenDropIn" style="margin-top:12px"></div>';
+      try {
+        const checkout = await AdyenCheckout({ clientKey: cfg.adyen_client_key, environment: cfg.adyen_env || "live", session: adyenData, onPaymentCompleted: () => {
+          loadPaySession();
+        } });
+        checkout.create("dropin").mount("#adyenDropIn");
+      } catch (e) {
+        document.getElementById("payFallback").innerHTML = '<div style="background:#FFF4CC;border:1px solid #FFE8A8;border-radius:12px;padding:14px;text-align:center"><b>Ready to pay ' + total + '</b><div style="font-size:12px;color:#7A5A00;margin-top:6px">Please pay at the counter \u2014 staff will confirm your payment.</div></div>';
       }
     } else {
-      document.getElementById('payFallback').innerHTML='<div style="background:#FFF4CC;border:1px solid #FFE8A8;border-radius:12px;padding:16px;text-align:center"><b style="font-size:16px">Ready to pay '+total+'</b><div style="font-size:13px;color:#7A5A00;margin-top:6px;line-height:1.6"><b>How to pay:</b> show this screen to staff at the counter and complete payment.<br>Once staff confirm, your <b>✅ Paid</b> confirmation and email-receipt option appear right here.</div></div>';
+      document.getElementById("payFallback").innerHTML = '<div style="background:#FFF4CC;border:1px solid #FFE8A8;border-radius:12px;padding:16px;text-align:center"><b style="font-size:16px">Ready to pay ' + total + '</b><div style="font-size:13px;color:#7A5A00;margin-top:6px;line-height:1.6"><b>How to pay:</b> show this screen to staff at the counter and complete payment.<br>Once staff confirm, your <b>\u2705 Paid</b> confirmation and email-receipt option appear right here.</div></div>';
     }
-    // Auto-refresh while waiting for payment confirmation (staff confirm / Adyen webhook)
-    if(!window.__payPoll){
-      window.__payPoll=setInterval(()=>{
-        const pv=document.getElementById('view-pay'); if(!pv || !pv.classList.contains('active')){ clearInterval(window.__payPoll); window.__payPoll=null; return; }
-        fetch('/api/qr/'+id).then(r=>r.json()).then(s2=>{ if(s2.status && s2.status!=='pending'){ clearInterval(window.__payPoll); window.__payPoll=null; loadPaySession(); } }).catch(()=>{});
-      }, 3000);
+    if (!window.__payPoll) {
+      window.__payPoll = setInterval(() => {
+        const pv = document.getElementById("view-pay");
+        if (!pv || !pv.classList.contains("active")) {
+          clearInterval(window.__payPoll);
+          window.__payPoll = null;
+          return;
+        }
+        fetch("/api/qr/" + id).then((r) => r.json()).then((s2) => {
+          if (s2.status && s2.status !== "pending") {
+            clearInterval(window.__payPoll);
+            window.__payPoll = null;
+            loadPaySession();
+          }
+        }).catch(() => {
+        });
+      }, 3e3);
     }
-  }catch(e){ document.getElementById('paySessionInfo').innerHTML='<div style="color:var(--red);font-weight:800">'+e.message+'</div>'; }
+  } catch (e) {
+    document.getElementById("paySessionInfo").innerHTML = '<div style="color:var(--red);font-weight:800">' + e.message + "</div>";
+  }
 }
-function startPollingQR(id){
-  if(qPoll) clearInterval(qPoll);
-  qPoll=setInterval(async()=>{
-    try{
-      const s=await fetch('/api/qr/'+id).then(r=>r.json());
-      if(s.status==='paid'){
+function startPollingQR(id) {
+  if (qPoll) clearInterval(qPoll);
+  qPoll = setInterval(async () => {
+    try {
+      const s = await fetch("/api/qr/" + id).then((r) => r.json());
+      if (s.status === "paid") {
         clearInterval(qPoll);
-        document.getElementById('qrStatusBadge').textContent='Paid ✓';
-        document.getElementById('qrStatusBadge').className='badge badge-teal';
-        document.getElementById('qrPollRow').style.display='none';
-        toast('QR Paid — verified by webhook','ok');
-        // show receipt
-        // find transaction for this qr
-        const txs=await api('/api/transactions');
-        const tx=txs.find(t=>t.qr_session_id===id);
-        if(tx) showReceiptFromTx(tx);
-        fetchTransactions(); fetchProducts();
-        setTimeout(()=>{ try{ window.print()}catch{} },500);
-      } else if(s.status==='expired'){
+        document.getElementById("qrStatusBadge").textContent = "Paid \u2713";
+        document.getElementById("qrStatusBadge").className = "badge badge-teal";
+        document.getElementById("qrPollRow").style.display = "none";
+        toast("QR Paid \u2014 verified by webhook", "ok");
+        const txs = await api("/api/transactions");
+        const tx = txs.find((t) => t.qr_session_id === id);
+        if (tx) showReceiptFromTx(tx);
+        fetchTransactions();
+        fetchProducts();
+        setTimeout(() => {
+          try {
+            window.print();
+          } catch (e) {
+          }
+        }, 500);
+      } else if (s.status === "expired") {
         clearInterval(qPoll);
-        document.getElementById('qrStatusBadge').textContent='Expired';
-        document.getElementById('qrStatusBadge').className='badge badge-red';
-        document.getElementById('qrPollRow').style.display='none';
+        document.getElementById("qrStatusBadge").textContent = "Expired";
+        document.getElementById("qrStatusBadge").className = "badge badge-red";
+        document.getElementById("qrPollRow").style.display = "none";
       }
-    }catch{}
-  }, 3000);
+    } catch (e) {
+    }
+  }, 3e3);
 }
-function pollQRNow(){ if(lastQRId) fetch('/api/qr/'+lastQRId).then(r=>r.json()).then(s=>{ toast('QR status: '+s.status,'ok'); if(s.status==='paid'){ clearInterval(qPoll); document.getElementById('qrStatusBadge').textContent='Paid ✓'; document.getElementById('qrStatusBadge').className='badge badge-teal'; } }); }
-async function fetchQRSessions(){
-  // List recent QR sessions by fetching transactions that have qr_session_id
-  try{
-    const txs=await api('/api/transactions');
-    const qrTxs=txs.filter(t=>t.qr_session_id);
-    const tbody=document.getElementById('qrTable'); if(!tbody) return;
-    // Also show pending QR sessions that have not yet become transactions - we can fetch each pending via local storage of last QRs
-    tbody.innerHTML=qrTxs.slice(0,10).map(t=>`<tr><td>${new Date(t.created_at).toLocaleString()}</td><td style="font-family:monospace;font-size:11px">${t.reference}</td><td><b>$${Number(t.total).toFixed(2)}</b></td><td><span class="badge badge-teal">${t.status}</span></td><td><a href="/pay/${t.qr_session_id}" target="_blank" style="color:var(--teal2);font-weight:700">/pay/${t.qr_session_id.slice(0,8)}…</a></td><td><button class="btn btn-ghost btn-sm" onclick="window.open('/pay/${t.qr_session_id}','_blank')">Open</button></td></tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No QR payments yet</td></tr>';
-  }catch(e){}
+function pollQRNow() {
+  if (lastQRId) fetch("/api/qr/" + lastQRId).then((r) => r.json()).then((s) => {
+    toast("QR status: " + s.status, "ok");
+    if (s.status === "paid") {
+      clearInterval(qPoll);
+      document.getElementById("qrStatusBadge").textContent = "Paid \u2713";
+      document.getElementById("qrStatusBadge").className = "badge badge-teal";
+    }
+  });
 }
-
-// Users
-async function fetchUsers(){
-  try{
-    const users=await api('/api/users');
-    document.getElementById('usersTable').innerHTML=users.map(u=>`
-      <tr><td><b>${u.name}</b></td><td>${u.email}</td><td><span class="badge ${u.role==='admin'?'badge-teal':u.role==='manager'?'badge-warn':'badge badge-teal'}" style="background:#F8F9FB;border-color:var(--border);color:var(--navy)">${u.protected?'🛡️ webmaster':u.role}</span></td><td>${u.active?'✓ Active':'— Disabled'}</td><td>${new Date(u.created_at).toLocaleDateString()}</td><td>${u.protected ? '<span class="badge badge-teal" title="Protected account — cannot be removed, disabled, or edited by anyone, not even admins or managers">🛡️ Protected</span>'+(me&&me.id===u.id?' <button class="btn btn-ghost btn-sm" onclick="changeMyPassword()">Change password</button>':'') : '<div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="editUser(\''+u.id+'\')">Edit</button><button class="btn btn-ghost btn-sm" onclick="deleteUser(\''+u.id+'\')">Delete</button></div>'}</td></tr>
-    `).join('');
-  }catch(e){ toast(e.message,'err') }
+async function fetchQRSessions() {
+  try {
+    const txs = await api("/api/transactions");
+    const qrTxs = txs.filter((t) => t.qr_session_id);
+    const tbody = document.getElementById("qrTable");
+    if (!tbody) return;
+    tbody.innerHTML = qrTxs.slice(0, 10).map((t) => `<tr><td>${new Date(t.created_at).toLocaleString()}</td><td style="font-family:monospace;font-size:11px">${t.reference}</td><td><b>$${Number(t.total).toFixed(2)}</b></td><td><span class="badge badge-teal">${t.status}</span></td><td><a href="/pay/${t.qr_session_id}" target="_blank" style="color:var(--teal2);font-weight:700">/pay/${t.qr_session_id.slice(0, 8)}\u2026</a></td><td><button class="btn btn-ghost btn-sm" onclick="window.open('/pay/${t.qr_session_id}','_blank')">Open</button></td></tr>`).join("") || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No QR payments yet</td></tr>';
+  } catch (e) {
+  }
 }
-function openUserModal(){ document.getElementById('uName').value=''; document.getElementById('uEmail').value=''; document.getElementById('uPass').value=''; document.getElementById('uRole').value='employee'; openModal('userModal'); }
-async function saveUser(){
-  const body={name:document.getElementById('uName').value.trim(), email:document.getElementById('uEmail').value.trim(), password:document.getElementById('uPass').value, role:document.getElementById('uRole').value};
-  if(!body.name||!body.email||!body.password) { toast('All fields required','err'); return; }
-  try{ await api('/api/users',{method:'POST', body}); closeModal('userModal'); fetchUsers(); toast('Employee account created','ok'); }catch(e){ toast(e.message,'err') }
+async function fetchUsers() {
+  try {
+    const users = await api("/api/users");
+    document.getElementById("usersTable").innerHTML = users.map((u) => `
+      <tr><td><b>${u.name}</b></td><td>${u.email}</td><td><span class="badge ${u.role === "admin" ? "badge-teal" : u.role === "manager" ? "badge-warn" : "badge badge-teal"}" style="background:#F8F9FB;border-color:var(--border);color:var(--navy)">${u.protected ? "\u{1F6E1}\uFE0F webmaster" : u.role}</span></td><td>${u.active ? "\u2713 Active" : "\u2014 Disabled"}</td><td>${new Date(u.created_at).toLocaleDateString()}</td><td>${u.protected ? '<span class="badge badge-teal" title="Protected account \u2014 cannot be removed, disabled, or edited by anyone, not even admins or managers">\u{1F6E1}\uFE0F Protected</span>' + (me && me.id === u.id ? ' <button class="btn btn-ghost btn-sm" onclick="changeMyPassword()">Change password</button>' : "") : `<div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="editUser('` + u.id + `')">Edit</button><button class="btn btn-ghost btn-sm" onclick="deleteUser('` + u.id + `')">Delete</button></div>`}</td></tr>
+    `).join("");
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-async function editUser(id){
-  const newName=prompt('New name?'); if(newName===null) return;
-  const newRole=prompt('Role? admin/manager/employee', 'employee'); if(!newRole) return;
-  try{ await api('/api/users/'+id,{method:'PUT', body:{name:newName, role:newRole}}); fetchUsers(); }catch(e){ toast(e.message,'err') }
+function openUserModal() {
+  document.getElementById("uName").value = "";
+  document.getElementById("uEmail").value = "";
+  document.getElementById("uPass").value = "";
+  document.getElementById("uRole").value = "employee";
+  openModal("userModal");
 }
-async function deleteUser(id){ if(!confirm('Delete this user?')) return; try{ await api('/api/users/'+id,{method:'DELETE'}); fetchUsers(); toast('Deleted','ok') }catch(e){ toast(e.message,'err') } }
-async function changeMyPassword(){
-  const p1=prompt('New password (at least 8 characters):'); if(p1===null) return;
-  if(p1.length<8){ toast('Password must be at least 8 characters','err'); return; }
-  try{ await api('/api/users/'+me.id,{method:'PUT', body:{password:p1}}); toast('Password updated','ok'); }catch(e){ toast(e.message,'err') }
+async function saveUser() {
+  const body = { name: document.getElementById("uName").value.trim(), email: document.getElementById("uEmail").value.trim(), password: document.getElementById("uPass").value, role: document.getElementById("uRole").value };
+  if (!body.name || !body.email || !body.password) {
+    toast("All fields required", "err");
+    return;
+  }
+  try {
+    await api("/api/users", { method: "POST", body });
+    closeModal("userModal");
+    fetchUsers();
+    toast("Employee account created", "ok");
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-async function sendPayReceipt(){
-  const email=document.getElementById('payEmailInput').value.trim();
-  const msg=document.getElementById('payEmailMsg');
-  if(!email || !/.+@.+\..+/.test(email)){ msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='Please enter a valid email address'; return; }
-  let id=null; const m=location.pathname.split('/pay/')[1]||'';
-  if(m) id=m.split('?')[0].split('#')[0]; else { const hm=location.hash.match(/#pay\/(.+)/); if(hm) id=hm[1].split('?')[0].split('#')[0]; }
-  if(!id){ msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='Order not found'; return; }
-  try{
-    const r=await fetch('/api/qr/'+id+'/receipt-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}).then(async x=>({ok:x.ok,d:await x.json().catch(()=>({}))}));
-    if(!r.ok) throw new Error(r.d.error||'Could not send receipt');
-    msg.style.display='block'; msg.style.color='#0A9B7A'; msg.textContent='✓ Your receipt will be emailed to '+email;
-  }catch(e){ msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent=e.message; }
+async function editUser(id) {
+  const newName = prompt("New name?");
+  if (newName === null) return;
+  const newRole = prompt("Role? admin/manager/employee", "employee");
+  if (!newRole) return;
+  try {
+    await api("/api/users/" + id, { method: "PUT", body: { name: newName, role: newRole } });
+    fetchUsers();
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-
-// Settings
-async function loadSettings(){
-  try{
-    const s=await api('/api/settings/raw');
-    settingsCache=s;
-    document.getElementById('cfgApiKey').value=s.adyen_api_key||'';
-    document.getElementById('cfgMerchant').value=s.adyen_merchant_account||'';
-    document.getElementById('cfgClientKey').value=s.adyen_client_key||'';
-    document.getElementById('cfgHmac').value=s.adyen_hmac_key||'';
-    document.getElementById('cfgEnv').value=s.adyen_env||'test';
-    document.getElementById('cfgTerminal').value=s.adyen_terminal_id||'';
-    document.getElementById('cfgStore').value=s.store_name||'';
-    document.getElementById('cfgTax').value=s.tax_rate||8.5;
-    document.getElementById('cfgCurrency').value=s.currency||'USD';
-    document.getElementById('cfgReceiptHead').value=s.receipt_header||'';
-    document.getElementById('cfgReceiptFoot').value=s.receipt_footer||'';
-    document.getElementById('adyenStatusBadge').textContent = s.adyen_api_key && s.adyen_merchant_account ? 'Active • '+s.adyen_env : 'Cash Ready • Add card readers when ready';
-    document.getElementById('adyenStatusBadge').className = 'badge badge-teal';
+async function deleteUser(id) {
+  if (!confirm("Delete this user?")) return;
+  try {
+    await api("/api/users/" + id, { method: "DELETE" });
+    fetchUsers();
+    toast("Deleted", "ok");
+  } catch (e) {
+    toast(e.message, "err");
+  }
+}
+async function changeMyPassword() {
+  const p1 = prompt("New password (at least 8 characters):");
+  if (p1 === null) return;
+  if (p1.length < 8) {
+    toast("Password must be at least 8 characters", "err");
+    return;
+  }
+  try {
+    await api("/api/users/" + me.id, { method: "PUT", body: { password: p1 } });
+    toast("Password updated", "ok");
+  } catch (e) {
+    toast(e.message, "err");
+  }
+}
+async function sendPayReceipt() {
+  const email = document.getElementById("payEmailInput").value.trim();
+  const msg = document.getElementById("payEmailMsg");
+  if (!email || !/.+@.+\..+/.test(email)) {
+    msg.style.display = "block";
+    msg.style.color = "var(--red)";
+    msg.textContent = "Please enter a valid email address";
+    return;
+  }
+  let id = null;
+  const m = location.pathname.split("/pay/")[1] || "";
+  if (m) id = m.split("?")[0].split("#")[0];
+  else {
+    const hm = location.hash.match(/#pay\/(.+)/);
+    if (hm) id = hm[1].split("?")[0].split("#")[0];
+  }
+  if (!id) {
+    msg.style.display = "block";
+    msg.style.color = "var(--red)";
+    msg.textContent = "Order not found";
+    return;
+  }
+  try {
+    const r = await fetch("/api/qr/" + id + "/receipt-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) }).then(async (x) => ({ ok: x.ok, d: await x.json().catch(() => ({})) }));
+    if (!r.ok) throw new Error(r.d.error || "Could not send receipt");
+    msg.style.display = "block";
+    msg.style.color = "#0A9B7A";
+    msg.textContent = "\u2713 Your receipt will be emailed to " + email;
+  } catch (e) {
+    msg.style.display = "block";
+    msg.style.color = "var(--red)";
+    msg.textContent = e.message;
+  }
+}
+async function loadSettings() {
+  try {
+    const s = await api("/api/settings/raw");
+    settingsCache = s;
+    document.getElementById("cfgApiKey").value = s.adyen_api_key || "";
+    document.getElementById("cfgMerchant").value = s.adyen_merchant_account || "";
+    document.getElementById("cfgClientKey").value = s.adyen_client_key || "";
+    document.getElementById("cfgHmac").value = s.adyen_hmac_key || "";
+    document.getElementById("cfgEnv").value = s.adyen_env || "test";
+    document.getElementById("cfgTerminal").value = s.adyen_terminal_id || "";
+    document.getElementById("cfgStore").value = s.store_name || "";
+    document.getElementById("cfgTax").value = s.tax_rate || 8.5;
+    document.getElementById("cfgCurrency").value = s.currency || "USD";
+    document.getElementById("cfgReceiptHead").value = s.receipt_header || "";
+    document.getElementById("cfgReceiptFoot").value = s.receipt_footer || "";
+    document.getElementById("adyenStatusBadge").textContent = s.adyen_api_key && s.adyen_merchant_account ? "Active \u2022 " + s.adyen_env : "Cash Ready \u2022 Add card readers when ready";
+    document.getElementById("adyenStatusBadge").className = "badge badge-teal";
     updateAdyenBadge();
-  }catch(e){ toast(e.message,'err') }
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-async function saveSettings(){
-  const body={
-    adyen_api_key:document.getElementById('cfgApiKey').value.trim(),
-    adyen_merchant_account:document.getElementById('cfgMerchant').value.trim(),
-    adyen_client_key:document.getElementById('cfgClientKey').value.trim(),
-    adyen_hmac_key:document.getElementById('cfgHmac').value.trim(),
-    adyen_env:document.getElementById('cfgEnv').value,
-    adyen_terminal_id:document.getElementById('cfgTerminal').value.trim(),
-    store_name:document.getElementById('cfgStore').value.trim(),
-    tax_rate:document.getElementById('cfgTax').value,
-    currency:document.getElementById('cfgCurrency').value.trim()||'USD',
-    receipt_header:document.getElementById('cfgReceiptHead').value.trim(),
-    receipt_footer:document.getElementById('cfgReceiptFoot').value.trim(),
+async function saveSettings() {
+  const body = {
+    adyen_api_key: document.getElementById("cfgApiKey").value.trim(),
+    adyen_merchant_account: document.getElementById("cfgMerchant").value.trim(),
+    adyen_client_key: document.getElementById("cfgClientKey").value.trim(),
+    adyen_hmac_key: document.getElementById("cfgHmac").value.trim(),
+    adyen_env: document.getElementById("cfgEnv").value,
+    adyen_terminal_id: document.getElementById("cfgTerminal").value.trim(),
+    store_name: document.getElementById("cfgStore").value.trim(),
+    tax_rate: document.getElementById("cfgTax").value,
+    currency: document.getElementById("cfgCurrency").value.trim() || "USD",
+    receipt_header: document.getElementById("cfgReceiptHead").value.trim(),
+    receipt_footer: document.getElementById("cfgReceiptFoot").value.trim()
   };
-  try{ await api('/api/settings',{method:'PUT', body}); toast('Settings saved','ok'); document.getElementById('cfgMsg').style.display='block'; document.getElementById('cfgMsg').textContent='Saved — Adyen will be used for next payment.'; document.getElementById('cfgMsg').style.color='#0A9B7A'; updateAdyenBadge(); if(body.adyen_terminal_id) { localStorage.setItem('tapflow_terminal', body.adyen_terminal_id); document.getElementById('terminalIdInput').value=body.adyen_terminal_id; } }catch(e){ toast(e.message,'err') }
+  try {
+    await api("/api/settings", { method: "PUT", body });
+    toast("Settings saved", "ok");
+    document.getElementById("cfgMsg").style.display = "block";
+    document.getElementById("cfgMsg").textContent = "Saved \u2014 Adyen will be used for next payment.";
+    document.getElementById("cfgMsg").style.color = "#0A9B7A";
+    updateAdyenBadge();
+    if (body.adyen_terminal_id) {
+      localStorage.setItem("tapflow_terminal", body.adyen_terminal_id);
+      document.getElementById("terminalIdInput").value = body.adyen_terminal_id;
+    }
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-
-// --- Arcade RFID ---
-let arcadeSelected=null;
-async function fetchArcadeCards(){
-  try{
-    const cards=await api('/api/arcade/cards');
-    document.getElementById('arcadeCount').textContent=cards.length+' cards';
-    document.getElementById('arcadeTable').innerHTML=cards.map(c=>`
-      <tr><td style="font-family:monospace;font-size:12px;font-weight:800">${c.uid}</td><td><b>${c.display_name||c.uid}</b></td><td>${(c.customer_name||'')+' '+(c.customer_email||'')} </td><td><b>$${(c.balance/100).toFixed(2)}</b> <span style="font-size:11px;color:var(--muted)">${c.currency}</span></td><td style="font-size:12px;color:var(--muted)">${new Date(c.updated_at).toLocaleString()}</td><td><button class="btn btn-ghost btn-sm" onclick="arcadePick('${c.id}')">Manage →</button></td></tr>
-    `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No cards yet — tap a card on the USB pad above to create one.</td></tr>';
-  }catch(e){ document.getElementById('arcadeTable').innerHTML='<tr><td colspan="6" style="color:var(--red)">'+e.message+'</td></tr>'; }
+let arcadeSelected = null;
+async function fetchArcadeCards() {
+  try {
+    const cards = await api("/api/arcade/cards");
+    document.getElementById("arcadeCount").textContent = cards.length + " cards";
+    document.getElementById("arcadeTable").innerHTML = cards.map((c) => `
+      <tr><td style="font-family:monospace;font-size:12px;font-weight:800">${c.uid}</td><td><b>${c.display_name || c.uid}</b></td><td>${(c.customer_name || "") + " " + (c.customer_email || "")} </td><td><b>$${(c.balance / 100).toFixed(2)}</b> <span style="font-size:11px;color:var(--muted)">${c.currency}</span></td><td style="font-size:12px;color:var(--muted)">${new Date(c.updated_at).toLocaleString()}</td><td><button class="btn btn-ghost btn-sm" onclick="arcadePick('${c.id}')">Manage \u2192</button></td></tr>
+    `).join("") || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No cards yet \u2014 tap a card on the USB pad above to create one.</td></tr>';
+  } catch (e) {
+    document.getElementById("arcadeTable").innerHTML = '<tr><td colspan="6" style="color:var(--red)">' + e.message + "</td></tr>";
+  }
 }
-async function arcadeScan(){
-  const uid=document.getElementById('arcadeScanUid').value.trim().toUpperCase();
-  if(!uid){ toast('Tap RFID card on pad — UID will appear here','err'); return; }
-  document.getElementById('arcadeScanResult').textContent='Looking up '+uid+'…';
-  document.getElementById('arcadeCreateBox').style.display='none';
-  document.getElementById('arcadeTopupBox').style.display='none';
-  try{
-    const r=await api('/api/arcade/scan',{method:'POST', body:{uid}});
-    if(r.found){
-      arcadeSelected=r.card;
-      document.getElementById('arcadeScanResult').innerHTML='<span style="background:#E6FFF9;border:1px solid #BFEDE3;padding:6px 10px;border-radius:999px;font-weight:800">Found: '+r.card.display_name+' • Balance $'+(r.card.balance/100).toFixed(2)+'</span> <span style="font-family:monospace;font-size:11px">'+r.card.uid+'</span>';
+async function arcadeScan() {
+  const uid = document.getElementById("arcadeScanUid").value.trim().toUpperCase();
+  if (!uid) {
+    toast("Tap RFID card on pad \u2014 UID will appear here", "err");
+    return;
+  }
+  document.getElementById("arcadeScanResult").textContent = "Looking up " + uid + "\u2026";
+  document.getElementById("arcadeCreateBox").style.display = "none";
+  document.getElementById("arcadeTopupBox").style.display = "none";
+  try {
+    const r = await api("/api/arcade/scan", { method: "POST", body: { uid } });
+    if (r.found) {
+      arcadeSelected = r.card;
+      document.getElementById("arcadeScanResult").innerHTML = '<span style="background:#E6FFF9;border:1px solid #BFEDE3;padding:6px 10px;border-radius:999px;font-weight:800">Found: ' + r.card.display_name + " \u2022 Balance $" + (r.card.balance / 100).toFixed(2) + '</span> <span style="font-family:monospace;font-size:11px">' + r.card.uid + "</span>";
       showArcadeTopup(r.card);
     } else {
-      arcadeSelected=null;
-      document.getElementById('arcadeScanResult').innerHTML='<span style="background:#FFF4CC;border:1px solid #FFE8A8;padding:6px 10px;border-radius:999px;font-weight:800">New card — not in system yet</span> UID <b style="font-family:monospace">'+uid+'</b> — create it:';
-      document.getElementById('arcadeCreateBox').style.display='block';
-      document.getElementById('arcadeNewName').value='Card '+uid.slice(-4);
+      arcadeSelected = null;
+      document.getElementById("arcadeScanResult").innerHTML = '<span style="background:#FFF4CC;border:1px solid #FFE8A8;padding:6px 10px;border-radius:999px;font-weight:800">New card \u2014 not in system yet</span> UID <b style="font-family:monospace">' + uid + "</b> \u2014 create it:";
+      document.getElementById("arcadeCreateBox").style.display = "block";
+      document.getElementById("arcadeNewName").value = "Card " + uid.slice(-4);
     }
-  }catch(e){ document.getElementById('arcadeScanResult').textContent=e.message; }
+  } catch (e) {
+    document.getElementById("arcadeScanResult").textContent = e.message;
+  }
 }
-function showArcadeTopup(card){
-  arcadeSelected=card;
-  document.getElementById('arcadeTopupBox').style.display='block';
-  document.getElementById('arcadeTopupTitle').textContent='Load money → '+card.display_name;
-  document.getElementById('arcadeTopupInfo').innerHTML='<b>'+card.display_name+'</b> <span style="font-family:monospace;font-size:11px">'+card.uid+'</span><br>Customer: '+(card.customer_name||'—')+' '+(card.customer_email||'')+'<br><b style="font-size:14px">Current balance: $'+(card.balance/100).toFixed(2)+'</b>';
+function showArcadeTopup(card) {
+  arcadeSelected = card;
+  document.getElementById("arcadeTopupBox").style.display = "block";
+  document.getElementById("arcadeTopupTitle").textContent = "Load money \u2192 " + card.display_name;
+  document.getElementById("arcadeTopupInfo").innerHTML = "<b>" + card.display_name + '</b> <span style="font-family:monospace;font-size:11px">' + card.uid + "</span><br>Customer: " + (card.customer_name || "\u2014") + " " + (card.customer_email || "") + '<br><b style="font-size:14px">Current balance: $' + (card.balance / 100).toFixed(2) + "</b>";
 }
-function arcadePick(id){
-  api('/api/arcade/cards/'+id).then(c=>{ document.getElementById('arcadeScanUid').value=c.uid; arcadeScan(); window.scrollTo({top:0,behavior:'smooth'}); });
+function arcadePick(id) {
+  api("/api/arcade/cards/" + id).then((c) => {
+    document.getElementById("arcadeScanUid").value = c.uid;
+    arcadeScan();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
 }
-async function arcadeCreate(){
-  const uid=document.getElementById('arcadeScanUid').value.trim().toUpperCase();
-  if(!uid) return toast('Tap card first','err');
-  const body={ uid, display_name: document.getElementById('arcadeNewName').value.trim()||uid, customer_name: document.getElementById('arcadeNewCustomer').value.trim(), customer_email: document.getElementById('arcadeNewEmail').value.trim(), initial_balance: Number(document.getElementById('arcadeNewBal').value||0) };
-  try{ const card=await api('/api/arcade/cards',{method:'POST', body}); toast('Card created','ok'); document.getElementById('arcadeCreateBox').style.display='none'; showArcadeTopup(card); fetchArcadeCards(); }catch(e){ toast(e.message,'err') }
+async function arcadeCreate() {
+  const uid = document.getElementById("arcadeScanUid").value.trim().toUpperCase();
+  if (!uid) return toast("Tap card first", "err");
+  const body = { uid, display_name: document.getElementById("arcadeNewName").value.trim() || uid, customer_name: document.getElementById("arcadeNewCustomer").value.trim(), customer_email: document.getElementById("arcadeNewEmail").value.trim(), initial_balance: Number(document.getElementById("arcadeNewBal").value || 0) };
+  try {
+    const card = await api("/api/arcade/cards", { method: "POST", body });
+    toast("Card created", "ok");
+    document.getElementById("arcadeCreateBox").style.display = "none";
+    showArcadeTopup(card);
+    fetchArcadeCards();
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-function arcadeSetAmount(n){ document.getElementById('arcadeAmount').value=n; }
-async function arcadeTopup(){
-  if(!arcadeSelected) return toast('Scan a card first','err');
-  const amount=document.getElementById('arcadeAmount').value;
-  if(!amount || Number(amount)<=0) return toast('Enter amount','err');
-  const payment_method=document.getElementById('arcadePayMethod').value;
-  // If terminal selected and Adyen configured, we could call /api/terminal/pay first, then on success call topup with reference.
-  // For now, cash/included immediately top up; terminal does a confirm step.
-  if(payment_method==='terminal'){
-    if(!confirm('Collect $'+Number(amount).toFixed(2)+' on Adyen reader for card '+arcadeSelected.uid+'? (Reader must be connected & configured in Settings) — after customer taps, this will load the balance.')) return;
-    // Attempt terminal charge for topup amount, then on captured, do topup
-    // We reuse cart flow with reference
-    const ref='RFIDTOP-'+Date.now().toString(36).toUpperCase();
-    try{
-      openModal('terminalModal');
-      document.getElementById('terminalAmount').textContent='$'+Number(amount).toFixed(2);
-      document.getElementById('terminalMsg').textContent='Contacting reader for RFID top-up…';
-      document.getElementById('terminalErr').style.display='none';
-      const pay=await api('/api/terminal/pay',{method:'POST', body:{ amount: Math.round(Number(amount)*100), currency:'USD', terminalId: (document.getElementById('terminalIdInput').value.trim()||localStorage.getItem('tapflow_terminal')||''), reference: ref, items:[{name:'RFID Top-up '+arcadeSelected.display_name, price:Number(amount), qty:1}], customer:{name:arcadeSelected.customer_name||'', email:arcadeSelected.customer_email||''} }});
-      if(pay.status!=='captured' && (pay.transaction?.status!=='captured') && !pay.ok) throw new Error('Reader did not capture — '+JSON.stringify(pay));
-      closeModal('terminalModal');
-    }catch(e){
-      document.getElementById('terminalErr').style.display='block';
-      document.getElementById('terminalErr').textContent=e.message;
-      document.getElementById('terminalMsg').textContent='Top-up payment failed — not loaded';
+function arcadeSetAmount(n) {
+  document.getElementById("arcadeAmount").value = n;
+}
+async function arcadeTopup() {
+  var _a;
+  if (!arcadeSelected) return toast("Scan a card first", "err");
+  const amount = document.getElementById("arcadeAmount").value;
+  if (!amount || Number(amount) <= 0) return toast("Enter amount", "err");
+  const payment_method = document.getElementById("arcadePayMethod").value;
+  if (payment_method === "terminal") {
+    if (!confirm("Collect $" + Number(amount).toFixed(2) + " on Adyen reader for card " + arcadeSelected.uid + "? (Reader must be connected & configured in Settings) \u2014 after customer taps, this will load the balance.")) return;
+    const ref = "RFIDTOP-" + Date.now().toString(36).toUpperCase();
+    try {
+      openModal("terminalModal");
+      document.getElementById("terminalAmount").textContent = "$" + Number(amount).toFixed(2);
+      document.getElementById("terminalMsg").textContent = "Contacting reader for RFID top-up\u2026";
+      document.getElementById("terminalErr").style.display = "none";
+      const pay = await api("/api/terminal/pay", { method: "POST", body: { amount: Math.round(Number(amount) * 100), currency: "USD", terminalId: document.getElementById("terminalIdInput").value.trim() || localStorage.getItem("tapflow_terminal") || "", reference: ref, items: [{ name: "RFID Top-up " + arcadeSelected.display_name, price: Number(amount), qty: 1 }], customer: { name: arcadeSelected.customer_name || "", email: arcadeSelected.customer_email || "" } } });
+      if (pay.status !== "captured" && ((_a = pay.transaction) == null ? void 0 : _a.status) !== "captured" && !pay.ok) throw new Error("Reader did not capture \u2014 " + JSON.stringify(pay));
+      closeModal("terminalModal");
+    } catch (e) {
+      document.getElementById("terminalErr").style.display = "block";
+      document.getElementById("terminalErr").textContent = e.message;
+      document.getElementById("terminalMsg").textContent = "Top-up payment failed \u2014 not loaded";
       return;
     }
-  } else if(payment_method==='cash'){
-    if(!confirm('Confirm $'+Number(amount).toFixed(2)+' cash received for '+arcadeSelected.uid+'?')) return;
+  } else if (payment_method === "cash") {
+    if (!confirm("Confirm $" + Number(amount).toFixed(2) + " cash received for " + arcadeSelected.uid + "?")) return;
   }
-  try{
-    const r=await api('/api/arcade/cards/'+arcadeSelected.id+'/topup',{method:'POST', body:{ amount, payment_method, reference: 'LOAD-'+Date.now().toString(36).toUpperCase() }});
-    toast('Loaded $'+Number(amount).toFixed(2)+' → '+arcadeSelected.uid+' new balance $'+(r.card.balance/100).toFixed(2),'ok');
-    arcadeSelected=r.card;
+  try {
+    const r = await api("/api/arcade/cards/" + arcadeSelected.id + "/topup", { method: "POST", body: { amount, payment_method, reference: "LOAD-" + Date.now().toString(36).toUpperCase() } });
+    toast("Loaded $" + Number(amount).toFixed(2) + " \u2192 " + arcadeSelected.uid + " new balance $" + (r.card.balance / 100).toFixed(2), "ok");
+    arcadeSelected = r.card;
     showArcadeTopup(r.card);
-    fetchArcadeCards(); fetchTransactions();
-  }catch(e){ toast(e.message,'err') }
+    fetchArcadeCards();
+    fetchTransactions();
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
-
-// Footer injection
-(function(){
-  const f=document.createElement('footer');
-  f.style.cssText='margin-top:18px;background:#0B1E3A;color:#8AA0BE;text-align:center;padding:14px 12px;font-size:11px;letter-spacing:.04em;border-top:1px solid #12366A';
-  f.innerHTML='<div style="font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff" id="footerCompany">© 2026 <span id="footerName">TapFlow Systems</span> — All Rights Reserved</div><div style="margin-top:4px;font-size:10px;opacity:.7">A D\'Avin Thomas Production <span style="margin:0 6px">•</span> Secure POS • Encrypted Transactions • PCI Compliant</div>';
+(function() {
+  const f = document.createElement("footer");
+  f.style.cssText = "margin-top:18px;background:#0B1E3A;color:#8AA0BE;text-align:center;padding:14px 12px;font-size:11px;letter-spacing:.04em;border-top:1px solid #12366A";
+  f.innerHTML = `<div style="font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff" id="footerCompany">\xA9 2026 <span id="footerName">TapFlow Systems</span> \u2014 All Rights Reserved</div><div style="margin-top:4px;font-size:10px;opacity:.7">A D'Avin Thomas Production <span style="margin:0 6px">\u2022</span> Secure POS \u2022 Encrypted Transactions \u2022 PCI Compliant</div>`;
   document.body.appendChild(f);
 })();
-
-// Utils
-function openModal(id){ document.getElementById(id).classList.add('open'); document.getElementById(id).style.display='grid'; }
-function closeModal(id){ const el=document.getElementById(id); el.classList.remove('open'); el.style.display='none'; }
-document.querySelectorAll('.modal-bg').forEach(m=> m.addEventListener('click', e=>{ if(e.target===m) { m.classList.remove('open'); m.style.display='none'; } }));
-
-// Init — public overview is default for logged-out users
-(async()=>{
+function openModal(id) {
+  document.getElementById(id).classList.add("open");
+  document.getElementById(id).style.display = "grid";
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  el.classList.remove("open");
+  el.style.display = "none";
+}
+document.querySelectorAll(".modal-bg").forEach((m) => m.addEventListener("click", (e) => {
+  if (e.target === m) {
+    m.classList.remove("open");
+    m.style.display = "none";
+  }
+}));
+(async () => {
   await checkMe();
-  const hashView = (location.hash||'').replace('#','');
-  const pathIsPay = location.pathname.startsWith('/pay/');
-  if(pathIsPay || hashView.startsWith('pay/')){ loadPaySession(); return; }
-  // HOME-PAGE RULE: opening the site ALWAYS lands on the first page.
-  // Stale hashes like #dashboard (bookmarks/refresh) are ignored and cleaned —
-  // guests see the public overview, staff see overview with the full nav.
-  // Staff can still jump to any view with the nav buttons after load.
-  try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
-  if(me){ showApp(); } else { go('overview'); }
+  const hashView = (location.hash || "").replace("#", "");
+  const pathIsPay = location.pathname.startsWith("/pay/");
+  if (pathIsPay || hashView.startsWith("pay/")) {
+    loadPaySession();
+    return;
+  }
+  try {
+    history.replaceState(null, "", location.pathname + location.search);
+  } catch (e) {
+  }
+  if (me) {
+    showApp();
+  } else {
+    go("overview");
+  }
 })();
-
-// Sync header company name from settings
-function updateHeaderBrand(){
-  if(settingsCache && settingsCache.store_name){
-    const n=settingsCache.store_name;
-    const lt=document.getElementById('logoText'); if(lt) lt.textContent = n.toLowerCase();
-    const fn=document.getElementById('footerName'); if(fn) fn.textContent=n;
-    const ps=document.getElementById('payStoreName'); if(ps) ps.textContent = n.toLowerCase();
+function updateHeaderBrand() {
+  if (settingsCache && settingsCache.store_name) {
+    const n = settingsCache.store_name;
+    const lt = document.getElementById("logoText");
+    if (lt) lt.textContent = n.toLowerCase();
+    const fn = document.getElementById("footerName");
+    if (fn) fn.textContent = n;
+    const ps = document.getElementById("payStoreName");
+    if (ps) ps.textContent = n.toLowerCase();
   }
 }
 const _origLoadSettings = loadSettings;
-loadSettings = async function(){ await _origLoadSettings(); updateHeaderBrand(); };
-
-// Allow direct /pay/:id load
-window.addEventListener('hashchange', ()=>{ if(location.hash.startsWith('#pay/')||location.pathname.startsWith('/pay/')) loadPaySession(); else document.body.classList.remove('paymode'); });
-// paymode guard: while a guest is on the QR pay page, ANY click outside the pay card is dead — only payment controls work.
-// SELF-HEALING: paymode can only ever block clicks while the pay view is actually ACTIVE.
-// If it ever sticks (browser Back / bfcache restore after visiting a /pay link), the guard
-// clears it on the first click or page restore — login, POS and the rest stay clickable.
-(function(){
-  function payViewActive(){
-    const pv=document.getElementById('view-pay');
-    return !!(pv && pv.classList.contains('active'));
+loadSettings = async function() {
+  await _origLoadSettings();
+  updateHeaderBrand();
+};
+window.addEventListener("hashchange", () => {
+  if (location.hash.startsWith("#pay/") || location.pathname.startsWith("/pay/")) {
+    loadPaySession();
+    return;
   }
-  function syncPaymode(){
-    const onPay = location.pathname.indexOf('/pay/')===0 || (location.hash||'').indexOf('#pay/')===0;
-    if(!onPay && !payViewActive()) document.body.classList.remove('paymode');
+  const hv = (location.hash || "").replace("#", "");
+  if (hv && document.getElementById("view-" + hv)) {
+    go(hv);
+    return;
   }
-  document.addEventListener('click', function(e){
-    if(!document.body.classList.contains('paymode')) return;
-    if(!payViewActive()){ document.body.classList.remove('paymode'); return; } // stuck state — self-heal, never block staff
-    const el=(e.target && e.target.closest)? e.target.closest('a,button,[onclick]'):null;
-    if(!el) return;
-    if(el.closest('#view-pay')) return; /* payment + email-receipt UI stays live */
-    e.preventDefault(); e.stopPropagation();
+  document.body.classList.remove("paymode");
+});
+(function() {
+  function payViewActive() {
+    const pv = document.getElementById("view-pay");
+    return !!(pv && pv.classList.contains("active"));
+  }
+  function syncPaymode() {
+    const onPay = location.pathname.indexOf("/pay/") === 0 || (location.hash || "").indexOf("#pay/") === 0;
+    if (!onPay && !payViewActive()) document.body.classList.remove("paymode");
+  }
+  document.addEventListener("click", function(e) {
+    if (!document.body.classList.contains("paymode")) return;
+    if (!payViewActive()) {
+      document.body.classList.remove("paymode");
+      return;
+    }
+    const el = e.target && e.target.closest ? e.target.closest("a,button,[onclick]") : null;
+    if (!el) return;
+    if (el.closest("#view-pay")) return;
+    e.preventDefault();
+    e.stopPropagation();
   }, true);
-  window.addEventListener('pageshow', syncPaymode);
-  window.addEventListener('popstate', syncPaymode);
-  document.addEventListener('visibilitychange', syncPaymode);
+  window.addEventListener("pageshow", syncPaymode);
+  window.addEventListener("popstate", syncPaymode);
+  document.addEventListener("visibilitychange", syncPaymode);
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
