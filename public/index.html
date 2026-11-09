@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TapFlow — POS & Payments</title>
+<title>TapFlow POS — Build v10</title>
 <link rel="stylesheet" href="https://checkoutshopper-live.adyen.com/checkoutshopper/sdk/5.39.0/adyen.css" crossorigin="anonymous">
 <script src="https://checkoutshopper-live.adyen.com/checkoutshopper/sdk/5.39.0/adyen.js" crossorigin="anonymous"></script>
 <style>
@@ -103,15 +103,18 @@ body.paymode #appShell{display:none !important}
 </style>
 </head>
 <body>
+<div id="bootErr" style="display:none;background:#B3261E;color:#fff;padding:10px 14px;font-weight:700;position:sticky;top:0;z-index:9999;font-size:13px;font-family:monospace"></div>
+<script>window.onerror=function(m,u,l){var b=document.getElementById('bootErr');if(b){b.style.display='block';b.textContent='Script error: '+m+' (line '+l+')';}};</script>
+
 <header class="header">
   <div class="container header-inner">
-    <a href="#" class="logo" onclick="go('overview');return false"><div class="logo-mark">◍</div> <span id="logoText">tapflow</span></a>
+    <a href="#overview" class="logo" onclick="go('overview');return false"><div class="logo-mark">◍</div> <span id="logoText">tapflow</span></a>
     <nav class="nav" style="gap:8px">
-      <a href="#" onclick="go('overview');return false" id="nav-overview">Overview</a>
-      <a href="#" onclick="go('dashboard');return false" id="nav-dashboard" style="display:none">📊 Dashboard</a>
-      <a href="#" onclick="go('pos');return false" id="nav-pos-h">POS</a>
-      <a href="#" onclick="go('products');return false" id="nav-products-h">Products</a>
-      <a href="#" onclick="go('qr');return false" id="nav-qr-h">QR Pay</a>
+      <a href="#overview" onclick="go('overview');return false" id="nav-overview">Overview</a>
+      <a href="#dashboard" onclick="go('dashboard');return false" id="nav-dashboard" style="display:none">📊 Dashboard</a>
+      <a href="#pos" onclick="go('pos');return false" id="nav-pos-h">POS</a>
+      <a href="#products" onclick="go('products');return false" id="nav-products-h">Products</a>
+      <a href="#qr" onclick="go('qr');return false" id="nav-qr-h">QR Pay</a>
     </nav>
     <div style="display:flex;gap:8px;align-items:center">
       <span id="adyenBadge" class="badge badge-warn">Checking payments…</span>
@@ -192,10 +195,10 @@ body.paymode #appShell{display:none !important}
           <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
             <button class="btn btn-teal" style="justify-content:center" onclick="showLogin()">Sign in as admin →</button>
             <div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px;font-size:12px;line-height:1.6">
-              <div><b><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2c4d484145426c584d5c4a40435b0240434f4d40">[email&#160;protected]</a></b> / Admin123!</div>
-              <div><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a8c5c9c6c9cfcddae8dcc9d8cec4c7df86c4c7cbc9c4">[email&#160;protected]</a> / Manager123!</div>
-              <div><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f1949c819d9e889494b1859081979d9e86df9d9e92909d">[email&#160;protected]</a> / Employee123!</div>
-              <div><b style="color:#00C9A7"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="dfbeadbcbebbba9fabbeafb9b3b0a8f1b3b0bcbeb3">[email&#160;protected]</a></b> / Arcade123! — Arcade Crew</div>
+              <div><b>admin@tapflow.local</b> / Admin123!</div>
+              <div>manager@tapflow.local / Manager123!</div>
+              <div>employee@tapflow.local / Employee123!</div>
+              <div><b style="color:#00C9A7">arcade@tapflow.local</b> / Arcade123! — Arcade Crew</div>
             </div>
             <div style="font-size:11px;color:#C2D1E8;line-height:1.5">After sign-in: <b style="color:#fff">Dashboard</b> = manager-only graphs · <b style="color:#fff">POS</b> = charge a reader · <b style="color:#fff">Products</b> = full CRUD · <b style="color:#fff">QR Pay</b> = phone checkout · <b style="color:#fff">Transactions</b> = ledger + refunds · <b style="color:#fff">Employees</b> = staff accounts · <b style="color:#fff">Settings</b> = Adyen + receipts. Cash & QR work now; Adyen keys can be imported later in Settings → Import.</div>
           </div>
@@ -219,10 +222,10 @@ body.paymode #appShell{display:none !important}
         <div style="margin-top:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px">
           <b style="font-size:12px">Default accounts (change after first login)</b>
           <div style="font-size:12px;line-height:1.6;color:#D6E2F5;margin-top:6px">
-            <div><b style="color:#fff"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1e7f7a7377705e6a7f6e787271693072717d7f72">[email&#160;protected]</a></b> / Admin123! — full access</div>
-            <div><b style="color:#fff"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2b464a454a4c4e596b5f4a5b4d47445c054744484a47">[email&#160;protected]</a></b> / Manager123! — products + dashboard</div>
-            <div><b style="color:#fff"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="482d25382427312d2d083c29382e24273f6624272b2924">[email&#160;protected]</a></b> / Employee123! — POS only</div>
-            <div><b style="color:#00C9A7"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="80e1f2e3e1e4e5c0f4e1f0e6eceff7aeecefe3e1ec">[email&#160;protected]</a></b> / Arcade123! — Arcade Crew (POS)</div>
+            <div><b style="color:#fff">admin@tapflow.local</b> / Admin123! — full access</div>
+            <div><b style="color:#fff">manager@tapflow.local</b> / Manager123! — products + dashboard</div>
+            <div><b style="color:#fff">employee@tapflow.local</b> / Employee123! — POS only</div>
+            <div><b style="color:#00C9A7">arcade@tapflow.local</b> / Arcade123! — Arcade Crew (POS)</div>
           </div>
         </div>
       </div>
@@ -610,7 +613,7 @@ async function stripeTerminalPay({amountCents, terminalId}){
 <div id="toastWrap" class="toast-wrap"></div>
 <style>@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(11,30,58,.25)}70%{box-shadow:0 0 0 16px rgba(11,30,58,0)}100%{box-shadow:0 0 0 0 rgba(11,30,58,0)}}</style>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>let token = localStorage.getItem("tapflow_token") || "";
+<script>let token = localStorage.getItem("tapflow_token") || "";
 let me = null;
 let products = [];
 let cart = [];
@@ -810,61 +813,119 @@ function exportAdyen() {
   toast("Exported adyen-config.json", "ok");
 }
 function go(view) {
-  document.body.classList.toggle("paymode", view === "pay");
-  const publicViews = ["overview", "login", "pay"];
-  if (!publicViews.includes(view) && !me) {
-    try {
-      history.replaceState(null, "", location.pathname + location.search);
-    } catch (e) {
+  try {
+    document.body.classList.toggle("paymode", view === "pay");
+    const publicViews = ["overview", "login", "pay"];
+    if (!publicViews.includes(view) && !me) {
+      try {
+        history.replaceState(null, "", location.pathname + location.search);
+      } catch (e) {
+      }
+      window.__pendingView = view;
+      view = "login";
     }
-    view = "login";
-  }
-  if (view === "dashboard" && me && !isManager()) {
-    toast("Dashboard is for managers only \u2014 Arcade Crew uses POS & QR", "err");
-    return;
-  }
-  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
-  const el = document.getElementById("view-" + view);
-  if (el) {
-    el.classList.add("active");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-  if (view === "overview") {
-    if (me) {
-      document.getElementById("appShell").classList.remove("hidden");
+    if (view === "dashboard" && me) {
+      var mgr = true;
+      try {
+        mgr = isManager();
+      } catch (e) {
+        mgr = true;
+      }
+      if (!mgr) {
+        toast("Dashboard is for managers only - Arcade Crew uses POS & QR", "err");
+        return;
+      }
+    }
+    if (view !== "pay") {
+      try {
+        history.replaceState(null, "", view === "overview" ? location.pathname + location.search : "#" + view);
+      } catch (e) {
+      }
+    }
+    document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+    const el = document.getElementById("view-" + view);
+    if (el) {
+      el.classList.add("active");
+      try {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (e) {
+        try {
+          window.scrollTo(0, 0);
+        } catch (e2) {
+        }
+      }
+    }
+    if (view === "overview") {
+      if (me) {
+        document.getElementById("appShell").classList.remove("hidden");
+        document.getElementById("view-login").style.display = "none";
+      } else {
+        document.getElementById("appShell").classList.add("hidden");
+        document.getElementById("view-login").classList.remove("active");
+      }
+    } else if (view === "login") {
+      document.getElementById("appShell").classList.add("hidden");
+    } else if (view === "pay") {
+      document.getElementById("appShell").classList.add("hidden");
       document.getElementById("view-login").style.display = "none";
     } else {
-      document.getElementById("appShell").classList.add("hidden");
+      document.getElementById("appShell").classList.remove("hidden");
       document.getElementById("view-login").classList.remove("active");
+      document.getElementById("view-login").style.display = "none";
     }
-  } else if (view === "login") {
-    document.getElementById("appShell").classList.add("hidden");
-  } else if (view === "pay") {
-    document.getElementById("appShell").classList.add("hidden");
-    document.getElementById("view-login").style.display = "none";
-  } else {
-    document.getElementById("appShell").classList.remove("hidden");
-    document.getElementById("view-login").classList.remove("active");
-    document.getElementById("view-login").style.display = "none";
+    try {
+      setActiveNav(view);
+    } catch (e) {
+    }
+    if (view === "pos") {
+      try {
+        if (products.length === 0) fetchProducts();
+        else renderProducts();
+      } catch (e) {
+      }
+    }
+    if (view === "products") {
+      try {
+        fetchProducts();
+      } catch (e) {
+      }
+    }
+    if (view === "transactions") {
+      try {
+        fetchTransactions();
+      } catch (e) {
+      }
+    }
+    if (view === "qr") {
+      try {
+        renderQRCartPreview();
+        fetchQRSessions();
+      } catch (e) {
+      }
+    }
+    if (view === "arcade") {
+      try {
+        fetchArcadeCards();
+      } catch (e) {
+      }
+    }
+    if (view === "users") {
+      try {
+        fetchUsers();
+      } catch (e) {
+      }
+    }
+    if (view === "settings") {
+      try {
+        loadSettings();
+      } catch (e) {
+      }
+    }
+    if (view === "pay") {
+      loadPaySession();
+    }
+  } catch (e) {
   }
-  setActiveNav(view);
-  if (view !== "pay") history.replaceState(null, "", "#" + view);
-  if (view === "overview") {
-  }
-  if (view === "pos") {
-    if (products.length === 0) fetchProducts();
-    else renderProducts();
-  }
-  if (view === "products") fetchProducts();
-  if (view === "transactions") fetchTransactions();
-  if (view === "qr") {
-    renderQRCartPreview();
-    fetchQRSessions();
-  }
-  if (view === "arcade") fetchArcadeCards();
-  if (view === "users") fetchUsers();
-  if (view === "settings") loadSettings();
-  if (view === "pay") loadPaySession();
 }
 function showLogin() {
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
@@ -911,6 +972,11 @@ async function doLogin(e) {
     me = data.user;
     localStorage.setItem("tapflow_token", token);
     showApp();
+    var pend = window.__pendingView;
+    window.__pendingView = null;
+    if (pend && pend !== "overview") {
+      go(pend);
+    }
     toast("Signed in as " + me.name, "ok");
   } catch (e2) {
     errEl.textContent = /Failed to fetch|NetworkError/i.test(e2.message) ? "Can't reach the server \u2014 open the app URL (Render/Fly or run npm start), not the static pages URL." : e2.message;
@@ -1772,7 +1838,7 @@ async function arcadeTopup() {
 (function() {
   const f = document.createElement("footer");
   f.style.cssText = "margin-top:18px;background:#0B1E3A;color:#8AA0BE;text-align:center;padding:14px 12px;font-size:11px;letter-spacing:.04em;border-top:1px solid #12366A";
-  f.innerHTML = `<div style="font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff" id="footerCompany">\xA9 2026 <span id="footerName">TapFlow Systems</span> \u2014 All Rights Reserved</div><div style="margin-top:4px;font-size:10px;opacity:.7">A D'Avin Thomas Production <span style="margin:0 6px">\u2022</span> Secure POS \u2022 Encrypted Transactions \u2022 PCI Compliant</div>`;
+  f.innerHTML = `<div style="font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff" id="footerCompany">\xA9 2026 <span id="footerName">TapFlow Systems</span> \u2014 All Rights Reserved <span style="opacity:.65;margin-left:6px">Build v10</span></div><div style="margin-top:4px;font-size:10px;opacity:.7">A D'Avin Thomas Production <span style="margin:0 6px">\u2022</span> Secure POS \u2022 Encrypted Transactions \u2022 PCI Compliant</div>`;
   document.body.appendChild(f);
 })();
 function openModal(id) {
@@ -1804,6 +1870,9 @@ document.querySelectorAll(".modal-bg").forEach((m) => m.addEventListener("click"
   }
   if (me) {
     showApp();
+    if (hashView && document.getElementById("view-" + hashView) && hashView !== "overview") {
+      go(hashView);
+    }
   } else {
     go("overview");
   }
@@ -1829,7 +1898,7 @@ window.addEventListener("hashchange", () => {
     loadPaySession();
     return;
   }
-  const hv = (location.hash || "").replace("#", "");
+  var hv = (location.hash || "").replace("#", "");
   if (hv && document.getElementById("view-" + hv)) {
     go(hv);
     return;
@@ -1862,6 +1931,5 @@ window.addEventListener("hashchange", () => {
   document.addEventListener("visibilitychange", syncPaymode);
 })();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
